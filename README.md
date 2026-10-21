@@ -1,3 +1,7 @@
+# Editing Stuff ATM
+
+
+
 # Persona-Style Portfolio — Numal Das
 
 A Persona menu-inspired portfolio, structured as Model–View–Controller.

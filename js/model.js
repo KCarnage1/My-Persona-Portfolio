@@ -6,15 +6,15 @@ const Model = {
   state: { screen: "home", menuIndex: 0, reposLoaded: false, skillsBuilt: false, aboutBuilt: false },
   screens: ["home", "projects", "skills", "about", "contact"],
 
-  // TODO: swap each url for the project's own repo link
+  // Paste the real repo link into `url` when it exists. Empty url = card shows "Repo coming soon" instead of a fake link.
   featured: [
-    { title: "CLOUD TASK MANAGER", tag: "Full-Stack", color: "#3dc8ff", url: "https://github.com/kcarnage1", cta: "View on GitHub →", img: "assets/projects/task-manager.png",
+    { title: "CLOUD TASK MANAGER", tag: "Full-Stack", color: "#3dc8ff", url: "", cta: "", img: "assets/projects/task-manager.png",
       desc: "Full-stack task manager with user accounts, task creation and status tracking. HTML, CSS, JavaScript and a Java backend, deployed on a cloud virtual machine with input validation and access control." },
-    { title: "CLOUD BACKUP TOOL", tag: "Python", color: "#3572A5", url: "https://github.com/kcarnage1", cta: "View on GitHub →", img: "assets/projects/backup-tool.png",
+    { title: "CLOUD BACKUP TOOL", tag: "Python", color: "#3572A5", url: "", cta: "", img: "assets/projects/backup-tool.png",
       desc: "Python script that watches a folder, compresses new files and uploads them to cloud storage on a schedule. Keeps a log and retries failed uploads so nothing gets lost quietly." },
-    { title: "SERVER MONITORING DASHBOARD", tag: "Dashboard", color: "#f1e05a", url: "https://github.com/kcarnage1", cta: "View on GitHub →", img: "assets/projects/monitoring-dashboard.png",
+    { title: "SERVER MONITORING DASHBOARD", tag: "Dashboard", color: "#f1e05a", url: "", cta: "", img: "assets/projects/monitoring-dashboard.png",
       desc: "Tracks CPU, memory and disk usage on a server and shows it as live charts in the browser. Python collects the data; the front end is JavaScript, HTML and CSS." },
-    { title: "LIBRARY MANAGEMENT SYSTEM", tag: "Java", color: "#b07219", url: "https://github.com/kcarnage1", cta: "View on GitHub →", img: "assets/projects/library-system.png",
+    { title: "LIBRARY MANAGEMENT SYSTEM", tag: "Java", color: "#b07219", url: "", cta: "", img: "assets/projects/library-system.png",
       desc: "Java program for managing books, members and loans with object-oriented design and file-based storage. Core logic was also rewritten in C++ to compare structure and memory handling." },
   ],
 

@@ -82,8 +82,9 @@ const View = {
   splitTitle(t) { const f = t.split(" ")[0]; return `<em>${f}</em>${t.slice(f.length)}`; },
 
   card(href, i, title, extra) {
-    const a = document.createElement("a");
-    a.className = "card reveal"; a.href = href; a.target = "_blank"; a.rel = "noopener";
+    const a = document.createElement(href ? "a" : "div");
+    a.className = "card reveal" + (href ? "" : " nolink");
+    if (href) { a.href = href; a.target = "_blank"; a.rel = "noopener"; }
     a.style.setProperty("--tilt", ((this.hash(title) % 5) - 2) * 0.6 + "deg");
     a.style.setProperty("--i", Math.min(i, 10));
     return a;
@@ -95,7 +96,7 @@ const View = {
       const a = this.card(f.url, i, f.title);
       a.innerHTML = `${this.thumb(f.img)}<span class="lang" style="--lc:${f.color}">${f.tag}</span>
         <h3>${this.splitTitle(f.title)}</h3><p>${f.desc}</p>
-        <div class="meta"><span>HIGHLIGHT</span><span class="go">${f.cta}</span></div>`;
+        <div class="meta"><span>${f.url ? "HIGHLIGHT" : "REPO COMING SOON"}</span><span class="go">${f.url ? f.cta || "View on GitHub →" : ""}</span></div>`;
       this.els.featGrid.appendChild(a);
     });
   },

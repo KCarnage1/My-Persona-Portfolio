@@ -7,6 +7,13 @@ const View = {
 
   reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches,
 
+  // Letters that always get a black box in the ransom-note lettering,
+  // keyed by the word they appear in (the big home title).
+  forceBox: {
+    CLOUD: ["O"],
+    IT: ["T"],
+  },
+
   els: {
     screens:    {},   // filled in init()
     menuItems:  [],
@@ -43,38 +50,26 @@ const View = {
   /* ---------- Ransom-note lettering ---------- */
   ransomize(el) {
     const text = el.dataset.ransom || el.textContent;
+    const forced = this.forceBox[text] || [];
     el.textContent = "";
     [...text].forEach((c, i) => {
       const span = document.createElement("span");
       span.className = "ch display";
       span.textContent = c;
       const h = this.hash(text + i);
-      const rot = (h % 17) - 8;                 // -8..8 degrees
+      const rot = (h % 17) - 8;                   // -8..8 degrees
       const scale = 0.86 + ((h >> 3) % 30) / 100; // 0.86..1.15
-      const dy = ((h >> 5) % 9) - 4;            // -4..4 px
+      const dy = ((h >> 5) % 9) - 4;              // -4..4 px
       const t = `rotate(${rot}deg) scale(${scale}) translateY(${dy}px)`;
       span.style.setProperty("--t", t);
       span.style.transform = t;
-    const variant = (h >> 7) % 10;
 
-// Force specific letters to have black boxes
-if (
-  (text === "NUMAL" && c === "M") ||
-  (text === "DAS" && c === "S")
-) {
-  span.classList.add("box");
-}
-else if (variant === 0) {
-  span.classList.add("box");
-}
-else if (variant === 1) {
-  span.classList.add("boxw");
-}
-else if (variant === 2) {
-  span.classList.add("red");
-}
+      const variant = (h >> 7) % 10;
+      if (forced.includes(c) || variant === 0) span.classList.add("box");
+      else if (variant === 1) span.classList.add("boxw");
+      else if (variant === 2) span.classList.add("red");
 
-el.appendChild(span);
+      el.appendChild(span);
     });
   },
 
@@ -116,7 +111,7 @@ el.appendChild(span);
       onerror="this.closest('.thumb').remove()"></div>`;
   },
 
-  // Split "Medical Image…" so the first word renders red
+  // Split the title so the first word renders red
   splitTitle(title) {
     const first = title.split(" ")[0];
     return `<em>${first}</em>${title.slice(first.length)}`;
@@ -194,10 +189,12 @@ el.appendChild(span);
 
   /* ---------- Ambient: clock, parallax, animated cursor ---------- */
   startClock() {
-    setInterval(() => {
+    const tick = () => {
       this.els.clock.textContent =
-        new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " · IND";
-    }, 1000);
+        new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    };
+    tick();
+    setInterval(tick, 1000);
   },
 
   startParallax() {

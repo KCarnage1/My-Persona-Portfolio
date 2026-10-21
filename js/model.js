@@ -5,10 +5,10 @@
 
 const Model = {
 
-  githubUser: "Numal400",
+  githubUser: "kcarnage1",
 
   // Where the contact form delivers (via formsubmit.co relay)
-  contactEmail: "numaldas500@gmail.com",
+  contactEmail: "rajesholbis@gmail.com",
 
   // App state (read/written by the Controller, displayed by the View)
   state: {
@@ -19,89 +19,77 @@ const Model = {
   },
 
   // ---- Featured projects (hand-written, shown above the GitHub feed) ----
+  // TODO: replace each url with the project's own repository link.
+  // Until then each card opens your GitHub profile.
   featured: [
     {
-      title: "7th SEMESTER PROJECT",
-      tag: "Live App", color: "#3dc8ff", live: true,
-      url: "https://github.com/Numal400/7th_Semester_Project.git", cta: "View on GitHub →",
-      img: "assets/projects/bsl.png",
-      desc: "PROJECT FOR ECE",
+      title: "CLOUD TASK MANAGER",
+      tag: "Full-Stack", color: "#3dc8ff",
+      url: "https://github.com/kcarnage1", cta: "View on GitHub →",
+      img: "assets/projects/task-manager.png",
+      desc: "Full-stack task manager with user accounts, task creation and status tracking. Built with HTML, CSS, JavaScript and a Java backend, deployed on a cloud virtual machine with input validation and access control.",
     },
     {
-      title: "OSCILLOSCOPE",
-      tag: "NLP", color: "#0064e6",
-      url: "https://github.com/Numal400/oscilloscope.git",
-      cta: "View on GitHub →",
-      img: "assets/projects/steam.png",
-      desc: "Code for digital Oscilloscope on Raspberry Pi5",
+      title: "CLOUD BACKUP TOOL",
+      tag: "Python", color: "#3572A5",
+      url: "https://github.com/kcarnage1", cta: "View on GitHub →",
+      img: "assets/projects/backup-tool.png",
+      desc: "Python script that watches a folder, compresses new files and uploads them to cloud storage on a schedule. Keeps a log and retries failed uploads so nothing gets lost quietly.",
     },
     {
-      title: "IMPORTANT PAGE",
-      tag: "Security", color: "#f1e05a",
-      url: "https://github.com/Numal400/ImportantByNumal-page.git", cta: "View on GitHub →",
-      img: "assets/projects/downloadguard.png",
-      desc: "Just a page",
+      title: "SERVER MONITORING DASHBOARD",
+      tag: "Dashboard", color: "#f1e05a",
+      url: "https://github.com/kcarnage1", cta: "View on GitHub →",
+      img: "assets/projects/monitoring-dashboard.png",
+      desc: "Tracks CPU, memory and disk usage on a server and shows it as live charts in the browser. Python collects the data; the front end is JavaScript, HTML and CSS.",
+    },
+    {
+      title: "LIBRARY MANAGEMENT SYSTEM",
+      tag: "Java", color: "#b07219",
+      url: "https://github.com/kcarnage1", cta: "View on GitHub →",
+      img: "assets/projects/library-system.png",
+      desc: "Java program for managing books, members and loans, built around object-oriented design with file-based storage. Core logic was also rewritten in C++ to compare structure and memory handling.",
     },
   ],
 
-  // Repos already shown in "featured" get hidden from the GitHub feed
-  featuredRepoNames: [
-    "7th SEMESTER PROJECT",
-    "OSCILLOSCOPE",
-    "IMPORTANT PAGE",
-  ],
+  // Repo names (exactly as on GitHub) that are already shown in "featured",
+  // so they get hidden from the GitHub feed. Fill these in once you have
+  // the real repository names, e.g. ["cloud-task-manager", "backup-tool"].
+  featuredRepoNames: [],
 
-  // Shown if the GitHub API can't be reached
-  fallbackRepos: [
-    {
-      name: "crime-analysis-montgomery-county", language: "Jupyter Notebook", stargazers_count: 0,
-      html_url: "https://github.com/Omicron69/crime-analysis-montgomery-county",
-      description: "Ten years of Montgomery County crime data, taken from a messy 90 MB government CSV to ten answered analytical questions, geospatial hotspot maps and a district safety ranking.",
-    },
-    {
-      name: "asthma-worsening-prediction", language: "MATLAB", stargazers_count: 0,
-      html_url: "https://github.com/Omicron69/asthma-worsening-prediction",
-      description: "Predicting worsening asthma symptoms from NHS primary-care data with SQL and MATLAB, following CRISP-DM. Compares four models on a heavily imbalanced clinical dataset.",
-    },
-    {
-      name: "Chronic-Kideney-Disease-Analyzer", language: "PHP", stargazers_count: 0,
-      html_url: "https://github.com/Omicron69/Chronic-Kideney-Disease-Analyzer",
-      description: "A healthcare tracking web app. I led the front-end and requirements analysis in a multidisciplinary team, and our solution improved patient diagnostics by 25%.",
-    },
-    {
-      name: "MSc-Washington-Crime-Analysis-with-Pandas", language: "Jupyter Notebook", stargazers_count: 0,
-      html_url: "https://github.com/Omicron69/MSc-Washington-Crime-Analysis-with-Pandas",
-      description: "Crime trend analysis of Washington D.C. public data. Reproducible Pandas notebooks with visual summaries written for people who do not code.",
-    },
-  ],
+  // Shown if the GitHub API can't be reached (leave empty or add your own)
+  fallbackRepos: [],
 
   // Optional thumbnail overrides: repo name → image path.
   // Anything not listed is looked up at assets/projects/<RepoName>.png
   projectImages: {
-    // "DownloadGuard": "assets/projects/downloadguard.png",
+    // "my-repo": "assets/projects/my-repo.png",
   },
 
   langColors: {
-    JavaScript: "#5c5af1", TypeScript: "#3178c6", Python: "#3572A5",
-    PHP: "#4F5D95", CSS: "#663399", HTML: "#e34c26",
-    "Jupyter Notebook": "#DA5B0B", MATLAB: "#e16737", Java: "#b07219", C: "#555", "C++": "#f34b7d",
+    JavaScript: "#f1e05a", TypeScript: "#3178c6", Python: "#3572A5",
+    Java: "#b07219", "C++": "#f34b7d", C: "#555", HTML: "#e34c26",
+    CSS: "#663399", Shell: "#89e051", Dockerfile: "#384d54",
+    "Jupyter Notebook": "#DA5B0B", PHP: "#4F5D95",
   },
 
   // ---- Skills screen ----
+  // The numbers (0–100) only set the bar length. Your CV doesn't give
+  // levels, so these are rough estimates: adjust them to what feels right.
   skills: [
-    { group: "AI · ML", items: [
-      ["Python · Java · C++", 50], ["Chat GPT", 88],
-      ["Gemini", 86], ["Meshy AI", 85],
-      ["NLP & Transformers", 82], ["MediaPipe", 86],
+    { group: "Languages", items: [
+      ["Python", 75], ["Java", 70],
+      ["JavaScript", 68], ["HTML · CSS", 72],
+      ["C++", 60],
     ]},
-    { group: "Cloud & Engineering", items: [
-      ["Git & GitHub", 88], ["Azure", 74],
-      ["Multisim", 76], ["LT Spice", 80],
-      ["Raspberry", 90], ["Bash · PowerShell", 67],
-      ["Proteus · Blender", 60],
+    { group: "Cloud & Systems", items: [
+      ["Git & GitHub", 75], ["Linux Command Line", 65],
+      ["Cloud Virtual Machines", 62], ["Cloud Storage", 58],
+      ["Networking Basics", 50],
     ]},
-    { group: "Spoken Languages", items: [
-      ["English · Assamese · Hindi", 100], ["Japanese (JLPT N4)", 62], ["Russian", 30],
+    { group: "Building", items: [
+      ["Full-Stack Web Apps", 65], ["Backend Systems", 62],
+      ["Automation & Scripting", 70], ["Monitoring Dashboards", 60],
     ]},
   ],
 

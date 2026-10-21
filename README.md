@@ -1,4 +1,4 @@
-# Persona-Style Portfolio
+# Persona-Style Portfolio — Numal Das
 
 A Persona menu-inspired portfolio, structured as Model–View–Controller.
 
@@ -52,7 +52,3 @@ Push the whole folder to a GitHub repo, enable Pages
 ## Controls
 
 ↑ / ↓ select · Enter confirm · Esc back · click the name to go home
-
-
-
-(nual das)

@@ -8,13 +8,13 @@ const Controller = {
   audioUnlocked: false,
 
   init() {
-  View.init();
-  this.bindMenu();
-  this.bindKeyboard();
-  this.bindAudioUnlock();
-  this.bindAudioButton();
-  this.bindContactForm();
-},
+    View.init();
+    this.bindMenu();
+    this.bindKeyboard();
+    this.bindAudioUnlock();
+    this.bindAudioButton();
+    this.bindContactForm();
+  },
 
   /* ---------- Contact form (relayed via formsubmit.co, mailto fallback) ---------- */
   bindContactForm() {
@@ -61,12 +61,12 @@ const Controller = {
   },
 
   /* ---------- Navigation ---------- */
-goTo(screen) { 
-  if (this.transitioning || screen === Model.state.screen) return; 
-  this.transitioning = true; 
-  this.play(); 
+  goTo(screen) {
+    if (this.transitioning || screen === Model.state.screen) return;
+    this.transitioning = true;
+    this.play();
 
-  View.wipe( 
+    View.wipe(
       () => {                       // mid-wipe: swap screens while covered
         Model.state.screen = screen;
         View.showScreen(screen);
@@ -90,9 +90,12 @@ goTo(screen) {
     View.renderFeatured(Model.featured);
     if (Model.state.reposLoaded) return;
     const { repos, live } = await Model.fetchRepos();
-    const status = live
-      ? `${repos.length} repositories · live from GitHub`
-      : "Showing pinned work · GitHub API unavailable right now";
+
+    let status;
+    if (!live) status = "Couldn't reach GitHub right now · featured projects are shown above";
+    else if (!repos.length) status = "No other public repositories yet";
+    else status = `${repos.length} repositories · live from GitHub`;
+
     View.renderRepos(repos, status, Model);
     Model.state.reposLoaded = true;
   },
@@ -110,41 +113,46 @@ goTo(screen) {
     if (this.audioUnlocked) View.playSelect();
   },
 
- bindAudioUnlock() {
-  const unlock = () => {
-    this.audioUnlocked = true;
-
+  // Keeps the speaker button in step with the video's real mute state
+  syncAudioButton() {
+    const button = document.getElementById("audio-toggle");
     const video = document.getElementById("home-video");
-
-    if (video) {
-      video.muted = false;
-      video.volume = 0.5;
-      video.play().catch(() => {});
+    if (!button || !video) return;
+    if (video.muted) {
+      button.textContent = "🔇";
+      button.setAttribute("aria-label", "Turn audio on");
+    } else {
+      button.textContent = "🔊";
+      button.setAttribute("aria-label", "Mute audio");
     }
-  };
+  },
 
-  addEventListener("pointerdown", unlock, { once: true, capture: true });
-  addEventListener("keydown", unlock, { once: true, capture: true });
-},
+  bindAudioUnlock() {
+    const unlock = () => {
+      this.audioUnlocked = true;
+      const video = document.getElementById("home-video");
+      if (video) {
+        video.muted = false;
+        video.volume = 0.5;
+        video.play().catch(() => {});
+        this.syncAudioButton();
+      }
+    };
+
+    addEventListener("pointerdown", unlock, { once: true, capture: true });
+    addEventListener("keydown", unlock, { once: true, capture: true });
+  },
+
   bindAudioButton() {
     const button = document.getElementById("audio-toggle");
     const video = document.getElementById("home-video");
-
     if (!button || !video) return;
 
-    button.addEventListener("click", (e) => {
+    button.addEventListener("click", e => {
       e.stopPropagation();
-
       video.muted = !video.muted;
-
-      if (!video.muted) {
-        video.play().catch(() => {});
-        button.textContent = "🔊";
-        button.setAttribute("aria-label", "Mute audio");
-      } else {
-        button.textContent = "🔇";
-        button.setAttribute("aria-label", "Turn audio on");
-      }
+      if (!video.muted) video.play().catch(() => {});
+      this.syncAudioButton();
     });
   },
 
@@ -158,7 +166,7 @@ goTo(screen) {
     document.querySelectorAll("[data-back]").forEach(b =>
       b.addEventListener("click", () => this.goTo("home")));
 
-    // Clicking the name always takes you home
+    // Clicking the big title always takes you home
     document.getElementById("big-name").addEventListener("click", () => {
       if (Model.state.screen !== "home") this.goTo("home");
       else this.play();

@@ -54,27 +54,10 @@ const Controller = {
   /* ---------- sound ---------- */
   play() { if (this.audioUnlocked) View.playSelect(); },
 
-  syncAudioButton() {
-    const b = document.getElementById("audio-toggle"), v = View.els.video;
-    b.textContent = v.muted ? "🔇" : "🔊";
-    b.setAttribute("aria-label", v.muted ? "Turn audio on" : "Mute audio");
-  },
-
-  bindAudio() {
-    const v = View.els.video, b = document.getElementById("audio-toggle");
-    const unlock = () => {
-      this.audioUnlocked = true;
-      v.muted = false; v.volume = 0.5;
-      if (Model.state.screen === "home") v.play().catch(() => {});
-      this.syncAudioButton();
-    };
+  bindAudio() {   // browsers block sound until the first gesture
+    const unlock = () => { this.audioUnlocked = true; };
     addEventListener("pointerdown", unlock, { once: true, capture: true });
     addEventListener("keydown", unlock, { once: true, capture: true });
-    b.addEventListener("click", e => {
-      e.stopPropagation(); v.muted = !v.muted;
-      if (!v.muted && Model.state.screen === "home") v.play().catch(() => {});
-      this.syncAudioButton();
-    });
   },
 
   /* ---------- input ---------- */

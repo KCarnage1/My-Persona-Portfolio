@@ -7,14 +7,16 @@
 <meta name="description" content="Portfolio of an IT undergraduate focused on software development and cloud engineering.">
 <meta name="theme-color" content="#e60012">
 <meta property="og:title" content="Portfolio · Cloud Engineering / IT">
-<meta property="og:description" content="Full-stack and cloud projects, skills and contact.">
+<meta property="og:description" content="Full-stack, cloud and game projects, skills and contact.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e60012'/%3E%3Cpolygon points='50,8 60,38 92,38 66,57 76,88 50,70 24,88 34,57 8,38 40,38' fill='%23000'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-screen="home">
+<body data-screen="home" class="booting">
+
+<a class="skip-link" href="#stage">Skip to content</a>
 
 <div id="bg" aria-hidden="true">
   <div class="bg-layer" id="bg-stripes"></div>
@@ -22,87 +24,138 @@
   <div class="bg-layer" id="bg-vignette"></div>
 </div>
 
-<div id="wipe" aria-hidden="true"><div class="pane p3"></div><div class="pane p2"></div><div class="pane p1"></div></div>
+<div id="wipe" aria-hidden="true">
+  <div class="pane p3"></div><div class="pane p2"></div><div class="pane p1"></div>
+  <div class="wipe-label"><span class="wipe-kicker" id="wipe-kicker"></span><span class="ransom" id="wipe-text"></span></div>
+</div>
 <div id="cursor" aria-hidden="true"></div>
 <audio id="sfx-select" src="assets/sfx/select.mp3" preload="auto"></audio>
 
 <div id="shell">
-  <div id="hud-top">
-    <div class="hud-tag">Portfolio // Cloud Engineering / IT</div>
-    
-  </div>
+  <header id="hud-top">
+    <button class="hud-tag" data-nav="home" aria-label="Home">KC <i>//</i> Cloud Engineering / IT</button>
+    <nav id="tabs" aria-label="Sections">
+      <span class="tab-key" aria-hidden="true">Q</span>
+      <button class="tab" data-nav="projects">Projects</button>
+      <button class="tab" data-nav="skills">Skills</button>
+      <button class="tab" data-nav="about">About</button>
+      <button class="tab" data-nav="contact">Contact</button>
+      <span class="tab-key" aria-hidden="true">E</span>
+    </nav>
+    <div class="hud-actions">
+      <button class="icon-btn" id="sound-toggle" aria-pressed="true" title="Sound (M)"><span class="on">♪</span><span class="off">✕</span><span class="sr-only">Sound</span></button>
+      <button class="icon-btn" id="help-btn" title="Keyboard shortcuts (?)">?<span class="sr-only">Keyboard shortcuts</span></button>
+    </div>
+    <div id="progress" aria-hidden="true"></div>
+  </header>
 
-  <main id="stage">
+  <main id="stage" tabindex="-1">
     <section class="screen active" id="screen-home" aria-label="Main menu">
       <div id="intro-eyebrow" class="reveal">Take a look at my work</div>
       <h1 id="big-name">
         <span class="ransom" data-ransom="CLOUD"></span>
         <span class="ransom" data-ransom="&amp; IT"></span>
       </h1>
-      <p id="tagline" class="reveal">Information Technology undergraduate interested in software development and cloud engineering. I like knowing what actually happens behind an app, from the code you see on screen to the servers keeping it online. I learn best by building something, breaking it, and working out why it broke.</p>
-      <nav id="menu" aria-label="Sections">
-        <button class="menu-item sel" data-target="projects"><span class="ransom" data-ransom="PROJECTS"></span><span class="cursor-mark">◀</span></button>
-        <button class="menu-item" data-target="skills"><span class="ransom" data-ransom="SKILLS"></span><span class="cursor-mark">◀</span></button>
-        <button class="menu-item" data-target="about"><span class="ransom" data-ransom="ABOUT"></span><span class="cursor-mark">◀</span></button>
-        <button class="menu-item" data-target="contact"><span class="ransom" data-ransom="CONTACT"></span><span class="cursor-mark">◀</span></button>
-      </nav>
+      <p id="tagline" class="reveal">Information Technology undergraduate interested in software development and cloud engineering. I like knowing what actually happens behind an app, from the code you see on screen to the servers keeping it online.</p>
+      <div id="menu-wrap">
+        <nav id="menu" aria-label="Sections">
+          <button class="menu-item sel" data-target="projects"><span class="num">01</span><span class="ransom" data-ransom="PROJECTS"></span></button>
+          <button class="menu-item" data-target="skills"><span class="num">02</span><span class="ransom" data-ransom="SKILLS"></span></button>
+          <button class="menu-item" data-target="about"><span class="num">03</span><span class="ransom" data-ransom="ABOUT"></span></button>
+          <button class="menu-item" data-target="contact"><span class="num">04</span><span class="ransom" data-ransom="CONTACT"></span></button>
+        </nav>
+        <div id="menu-caption" aria-live="polite"><span></span></div>
+      </div>
     </section>
 
     <section class="screen sub" id="screen-projects" aria-label="Projects">
       <div class="screen-head"><span class="ransom" data-ransom="PROJECTS"></span></div>
-      <button class="back-hint" data-back>ESC · Back</button>
-      <div class="grid-label reveal"><span class="bar"></span>Featured</div>
+      <div class="filters reveal" role="group" aria-label="Filter projects" id="filters"></div>
+      <div class="grid-label reveal" data-group="main"><span class="bar"></span>Featured<span class="count" id="feat-count"></span></div>
       <div id="feat-grid" class="grid"></div>
-      <div class="grid-label reveal"><span class="bar"></span>All repositories</div>
+      <div class="grid-label reveal" data-group="small"><span class="bar"></span>Smaller builds</div>
+      <div id="small-grid" class="grid grid-small"></div>
+      <div class="grid-label reveal"><span class="bar"></span>Live from GitHub</div>
       <div id="repo-status" aria-live="polite">Contacting GitHub…</div>
-      <div id="repo-grid" class="grid"></div>
+      <div id="repo-grid" class="grid grid-small"></div>
     </section>
 
     <section class="screen sub" id="screen-skills" aria-label="Skills">
       <div class="screen-head"><span class="ransom" data-ransom="SKILLS"></span></div>
-      <button class="back-hint" data-back>ESC · Back</button>
       <div id="skills-body"></div>
     </section>
 
     <section class="screen sub align-right" id="screen-about" aria-label="About">
       <div class="screen-head"><span class="ransom" data-ransom="ABOUT"></span></div>
-      <button class="back-hint" data-back>ESC · Back</button>
       <div class="paper reveal" id="about-body"></div>
       <a class="cv-btn reveal" href="assets/resume/Numal_Das_Resume.pdf" download="Resume.pdf"><span>⬇ Download my CV (PDF)</span></a>
     </section>
 
     <section class="screen sub align-right" id="screen-contact" aria-label="Contact">
       <div class="screen-head"><span class="ransom" data-ransom="CONTACT"></span></div>
-      <button class="back-hint" data-back>ESC · Back</button>
-      <div class="paper reveal" style="max-width:620px">
+      <div class="paper reveal narrow">
         <p>I'm open to <strong>software development and cloud engineering opportunities</strong> and project collaborations. Send a message below and it goes straight to my inbox, or find me here:</p>
       </div>
       <div class="contact-list reveal">
-        <a class="contact-chip" href="https://github.com/kcarnage1" target="_blank" rel="noopener"><span>GitHub ↗</span></a>
+        <a class="contact-chip" href="https://github.com/KCarnage1" target="_blank" rel="noopener"><span>GitHub ↗</span></a>
         <a class="contact-chip" href="https://www.instagram.com/kc.cc0" target="_blank" rel="noopener"><span>Instagram ↗</span></a>
         <a class="contact-chip" href="assets/resume/Numal_Das_Resume.pdf" download="Resume.pdf"><span>CV ⬇</span></a>
       </div>
-      <form id="contact-form" class="paper reveal" style="max-width:620px" novalidate>
+      <form id="contact-form" class="paper reveal narrow" novalidate>
         <div class="form-head">Send me a message</div>
         <label class="field"><span>Name</span><input type="text" name="name" required maxlength="100" autocomplete="name"></label>
         <label class="field"><span>Your email</span><input type="email" name="email" required maxlength="150" autocomplete="email"></label>
-        <label class="field"><span>Message</span><textarea name="message" required rows="5" maxlength="3000"></textarea></label>
-        <input type="text" name="_honey" tabindex="-1" autocomplete="off" style="position:absolute;left:-5000px" aria-hidden="true">
+        <label class="field"><span>Message <em id="msg-count">0 / 3000</em></span><textarea name="message" required rows="5" maxlength="3000"></textarea></label>
+        <input type="text" name="_honey" tabindex="-1" autocomplete="off" class="honey" aria-hidden="true">
         <div class="form-foot">
           <button type="submit" class="cv-btn form-send"><span>Send it ➤</span></button>
+          <span class="form-tip">Ctrl + Enter to send · drafts are saved on this device</span>
           <div id="form-status" role="status"></div>
         </div>
       </form>
     </section>
   </main>
 
-  <div id="hud-bottom">
-    <span><span class="key">↑↓</span>Select</span>
-    <span><span class="key">Enter</span>Confirm</span>
-    <span><span class="key">Esc</span>Back</span>
-    <span style="margin-left:auto;opacity:.8" id="clock"></span>
+  <footer id="hud-bottom">
+    <span class="hint home-only"><span class="key">↑↓</span>Select</span>
+    <span class="hint home-only"><span class="key">Enter</span>Confirm</span>
+    <span class="hint"><span class="key">1–4</span>Jump</span>
+    <span class="hint sub-only"><span class="key">Q / E</span>Switch</span>
+    <span class="hint sub-only"><span class="key">Esc</span>Back</span>
+    <span class="hint"><span class="key">?</span>Help</span>
+    <span id="clock"></span>
+  </footer>
+</div>
+
+<button id="to-top" aria-label="Back to top"><span>▲</span></button>
+
+<div id="modal" class="overlay" hidden>
+  <div class="overlay-bg" data-close></div>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="m-title" tabindex="-1">
+    <button class="modal-close" data-close aria-label="Close">✕ <span class="key">Esc</span></button>
+    <div id="modal-body"></div>
   </div>
 </div>
+
+<div id="help" class="overlay" hidden>
+  <div class="overlay-bg" data-close></div>
+  <div class="help-panel" role="dialog" aria-modal="true" aria-labelledby="help-title" tabindex="-1">
+    <h2 id="help-title">Controls</h2>
+    <dl>
+      <dt><span class="key">↑</span><span class="key">↓</span></dt><dd>Move through the main menu</dd>
+      <dt><span class="key">Enter</span></dt><dd>Open the selected section</dd>
+      <dt><span class="key">1</span>–<span class="key">4</span></dt><dd>Jump straight to a section</dd>
+      <dt><span class="key">Q</span><span class="key">E</span></dt><dd>Previous / next section (← → work too)</dd>
+      <dt><span class="key">Esc</span></dt><dd>Close a window, or go back to the menu</dd>
+      <dt><span class="key">←</span><span class="key">→</span></dt><dd>Previous / next project while one is open</dd>
+      <dt><span class="key">M</span></dt><dd>Sound on / off</dd>
+      <dt><span class="key">?</span></dt><dd>Show this list</dd>
+    </dl>
+    <button class="cv-btn" data-close><span>Got it</span></button>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script src="js/bgfx.js" defer></script>
 <script src="js/model.js" defer></script>

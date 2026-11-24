@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Portfolio · Cloud Engineering / IT</title>
-<meta name="description" content="Portfolio of an IT undergraduate focused on software development and cloud engineering.">
+<meta name="description" content="Portfolio of an IT undergraduate focused on software development and cloud engineering: web apps, a desktop game, a game mod, skills and contact.">
 <meta name="theme-color" content="#e60012">
 <meta property="og:title" content="Portfolio · Cloud Engineering / IT">
 <meta property="og:description" content="Full-stack, cloud and game projects, skills and contact.">
@@ -17,6 +17,7 @@
 <body data-screen="home" class="booting">
 
 <a class="skip-link" href="#stage">Skip to content</a>
+<noscript><p class="noscript">This portfolio needs JavaScript for its menus. The CV is still available at <a href="assets/resume/Resume.pdf">assets/resume/Resume.pdf</a>.</p></noscript>
 
 <div id="bg" aria-hidden="true">
   <div class="bg-layer" id="bg-stripes"></div>
@@ -33,7 +34,7 @@
 
 <div id="shell">
   <header id="hud-top">
-    <button class="hud-tag" data-nav="home" aria-label="Home">KC <i>//</i> Cloud Engineering / IT</button>
+    <button class="hud-tag" data-nav="home" aria-label="Back to the main menu">KC <i>//</i> <span class="tag-long">Cloud Engineering / IT</span></button>
     <nav id="tabs" aria-label="Sections">
       <span class="tab-key" aria-hidden="true">Q</span>
       <button class="tab" data-nav="projects">Projects</button>
@@ -43,22 +44,29 @@
       <span class="tab-key" aria-hidden="true">E</span>
     </nav>
     <div class="hud-actions">
-      <button class="icon-btn" id="sound-toggle" aria-pressed="true" title="Sound (M)"><span class="on">♪</span><span class="off">✕</span><span class="sr-only">Sound</span></button>
-      <button class="icon-btn" id="help-btn" title="Keyboard shortcuts (?)">?<span class="sr-only">Keyboard shortcuts</span></button>
+      <button class="icon-btn" id="palette-btn" title="Quick jump (/)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l5.5 5.5"/></svg><span class="sr-only">Quick jump</span></button>
+      <button class="icon-btn" id="motion-toggle" aria-pressed="true" title="Background animation (B)"><svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5h3v14H8zM13 5h3v14h-3z"/></svg><svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg><span class="sr-only">Background animation</span></button>
+      <button class="icon-btn" id="sound-toggle" aria-pressed="true" title="Sound (M)"><svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12"/></svg><svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 9l5 6M21 9l-5 6"/></svg><span class="sr-only">Sound</span></button>
+      <button class="icon-btn" id="help-btn" title="Keyboard controls (?)"><span aria-hidden="true">?</span><span class="sr-only">Keyboard controls</span></button>
     </div>
     <div id="progress" aria-hidden="true"></div>
   </header>
 
   <main id="stage" tabindex="-1">
-    <section class="screen active" id="screen-home" aria-label="Main menu">
-      <div id="intro-eyebrow" class="reveal">Take a look at my work</div>
+    <section class="screen active" id="screen-home" aria-labelledby="big-name">
+      <aside id="calendar" aria-label="Today">
+        <div class="cal-date"><span class="cal-md" id="cal-md"></span><span class="cal-wd" id="cal-wd"></span></div>
+        <div class="cal-phase" id="cal-phase"></div>
+        <div class="cal-moon"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" class="moon-dark"/><path id="moon-lit" class="moon-lit"/></svg><span id="cal-moon"></span></div>
+      </aside>
+      <p id="intro-eyebrow" class="reveal">KC <i>//</i> IT undergraduate</p>
       <h1 id="big-name">
         <span class="ransom" data-ransom="CLOUD"></span>
         <span class="ransom" data-ransom="&amp; IT"></span>
       </h1>
-      <p id="tagline" class="reveal">Information Technology undergraduate interested in software development and cloud engineering. I like knowing what actually happens behind an app, from the code you see on screen to the servers keeping it online.</p>
+      <p id="tagline" class="reveal">I build web apps, desktop games and the servers behind them, and I like knowing what actually happens between the code on screen and the machine keeping it online.</p>
       <div id="menu-wrap">
-        <nav id="menu" aria-label="Sections">
+        <nav id="menu" aria-label="Main menu">
           <button class="menu-item sel" data-target="projects"><span class="num">01</span><span class="ransom" data-ransom="PROJECTS"></span></button>
           <button class="menu-item" data-target="skills"><span class="num">02</span><span class="ransom" data-ransom="SKILLS"></span></button>
           <button class="menu-item" data-target="about"><span class="num">03</span><span class="ransom" data-ransom="ABOUT"></span></button>
@@ -68,48 +76,58 @@
       </div>
     </section>
 
-    <section class="screen sub" id="screen-projects" aria-label="Projects">
-      <div class="screen-head"><span class="ransom" data-ransom="PROJECTS"></span></div>
+    <section class="screen sub" id="screen-projects" aria-labelledby="h-projects">
+      <h2 class="screen-head" id="h-projects"><span class="ransom" data-ransom="PROJECTS"></span></h2>
       <div class="filters reveal" role="group" aria-label="Filter projects" id="filters"></div>
-      <div class="grid-label reveal" data-group="main"><span class="bar"></span>Featured<span class="count" id="feat-count"></span></div>
+      <h3 class="grid-label reveal" data-group="main"><span class="bar" aria-hidden="true"></span>Featured<span class="count" id="feat-count"></span></h3>
       <div id="feat-grid" class="grid"></div>
-      <div class="grid-label reveal" data-group="small"><span class="bar"></span>Smaller builds</div>
+      <h3 class="grid-label reveal" data-group="small"><span class="bar" aria-hidden="true"></span>Smaller builds</h3>
       <div id="small-grid" class="grid grid-small"></div>
-      <div class="grid-label reveal"><span class="bar"></span>Live from GitHub</div>
-      <div id="repo-status" aria-live="polite">Contacting GitHub…</div>
+      <h3 class="grid-label reveal"><span class="bar" aria-hidden="true"></span>More on GitHub</h3>
+      <div id="repo-status" aria-live="polite"></div>
       <div id="repo-grid" class="grid grid-small"></div>
     </section>
 
-    <section class="screen sub" id="screen-skills" aria-label="Skills">
-      <div class="screen-head"><span class="ransom" data-ransom="SKILLS"></span></div>
-      <div id="skills-body"></div>
+    <section class="screen sub" id="screen-skills" aria-labelledby="h-skills">
+      <h2 class="screen-head" id="h-skills"><span class="ransom" data-ransom="SKILLS"></span></h2>
+      <p class="screen-note reveal">Levels are my own rating out of 100. Pick a skill to see the projects where I used it.</p>
+      <div id="skills-body" class="sk-layout">
+        <div class="sk-groups reveal" role="tablist" aria-label="Skill groups" id="sk-groups"></div>
+        <div class="sk-panel reveal" role="tabpanel" id="sk-panel" tabindex="-1">
+          <div class="sk-chart">
+            <svg viewBox="-200 -145 400 290" id="sk-radar" role="img" aria-labelledby="sk-radar-title"><title id="sk-radar-title"></title></svg>
+          </div>
+          <ol class="sk-list" id="sk-list"></ol>
+          <div class="sk-detail" id="sk-detail" aria-live="polite"></div>
+        </div>
+      </div>
     </section>
 
-    <section class="screen sub align-right" id="screen-about" aria-label="About">
-      <div class="screen-head"><span class="ransom" data-ransom="ABOUT"></span></div>
+    <section class="screen sub align-right" id="screen-about" aria-labelledby="h-about">
+      <h2 class="screen-head" id="h-about"><span class="ransom" data-ransom="ABOUT"></span></h2>
       <div class="paper reveal" id="about-body"></div>
-      <a class="cv-btn reveal" href="assets/resume/Numal_Das_Resume.pdf" download="Resume.pdf"><span>⬇ Download my CV (PDF)</span></a>
+      <a class="cv-btn reveal" href="assets/resume/Resume.pdf" download="Resume.pdf"><span>Download my CV (PDF)</span></a>
     </section>
 
-    <section class="screen sub align-right" id="screen-contact" aria-label="Contact">
-      <div class="screen-head"><span class="ransom" data-ransom="CONTACT"></span></div>
+    <section class="screen sub align-right" id="screen-contact" aria-labelledby="h-contact">
+      <h2 class="screen-head" id="h-contact"><span class="ransom" data-ransom="CONTACT"></span></h2>
       <div class="paper reveal narrow">
         <p>I'm open to <strong>software development and cloud engineering opportunities</strong> and project collaborations. Send a message below and it goes straight to my inbox, or find me here:</p>
       </div>
       <div class="contact-list reveal">
-        <a class="contact-chip" href="https://github.com/KCarnage1" target="_blank" rel="noopener"><span>GitHub ↗</span></a>
-        <a class="contact-chip" href="https://www.instagram.com/kc.cc0" target="_blank" rel="noopener"><span>Instagram ↗</span></a>
-        <a class="contact-chip" href="assets/resume/Numal_Das_Resume.pdf" download="Resume.pdf"><span>CV ⬇</span></a>
+        <a class="contact-chip" href="https://github.com/KCarnage1" target="_blank" rel="noopener"><span>GitHub <span class="ext" aria-hidden="true">↗</span><span class="sr-only">(opens in a new tab)</span></span></a>
+        <a class="contact-chip" href="https://www.instagram.com/kc.cc0" target="_blank" rel="noopener"><span>Instagram <span class="ext" aria-hidden="true">↗</span><span class="sr-only">(opens in a new tab)</span></span></a>
+        <a class="contact-chip" href="assets/resume/Resume.pdf" download="Resume.pdf"><span>Download CV</span></a>
       </div>
       <form id="contact-form" class="paper reveal narrow" novalidate>
-        <div class="form-head">Send me a message</div>
-        <label class="field"><span>Name</span><input type="text" name="name" required maxlength="100" autocomplete="name"></label>
-        <label class="field"><span>Your email</span><input type="email" name="email" required maxlength="150" autocomplete="email"></label>
-        <label class="field"><span>Message <em id="msg-count">0 / 3000</em></span><textarea name="message" required rows="5" maxlength="3000"></textarea></label>
+        <h3 class="form-head">Send me a message</h3>
+        <label class="field"><span>Name</span><input type="text" name="name" required maxlength="100" autocomplete="name"><small class="err" aria-live="polite"></small></label>
+        <label class="field"><span>Your email</span><input type="email" name="email" required maxlength="150" autocomplete="email" inputmode="email"><small class="err" aria-live="polite"></small></label>
+        <label class="field"><span>Message <em id="msg-count">0 / 3000</em></span><textarea name="message" required rows="5" maxlength="3000"></textarea><small class="err" aria-live="polite"></small></label>
         <input type="text" name="_honey" tabindex="-1" autocomplete="off" class="honey" aria-hidden="true">
         <div class="form-foot">
-          <button type="submit" class="cv-btn form-send"><span>Send it ➤</span></button>
-          <span class="form-tip">Ctrl + Enter to send · drafts are saved on this device</span>
+          <button type="submit" class="cv-btn form-send"><span>Send message</span></button>
+          <span class="form-tip">Ctrl + Enter sends. Unsent drafts stay on this device.</span>
           <div id="form-status" role="status"></div>
         </div>
       </form>
@@ -122,18 +140,30 @@
     <span class="hint"><span class="key">1–4</span>Jump</span>
     <span class="hint sub-only"><span class="key">Q / E</span>Switch</span>
     <span class="hint sub-only"><span class="key">Esc</span>Back</span>
+    <span class="hint"><span class="key">/</span>Search</span>
     <span class="hint"><span class="key">?</span>Help</span>
     <span id="clock"></span>
   </footer>
 </div>
 
-<button id="to-top" aria-label="Back to top"><span>▲</span></button>
+<button id="to-top"><span aria-hidden="true">▲</span><span class="sr-only">Back to top</span></button>
 
 <div id="modal" class="overlay" hidden>
   <div class="overlay-bg" data-close></div>
   <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="m-title" tabindex="-1">
-    <button class="modal-close" data-close aria-label="Close">✕ <span class="key">Esc</span></button>
+    <button class="modal-close" data-close>Close <span class="key">Esc</span></button>
     <div id="modal-body"></div>
+  </div>
+</div>
+
+<div id="palette" class="overlay" hidden>
+  <div class="overlay-bg" data-close></div>
+  <div class="palette-panel" role="dialog" aria-modal="true" aria-label="Quick jump">
+    <label class="palette-field"><span class="sr-only">Search sections, projects and actions</span>
+      <input id="palette-input" type="text" autocomplete="off" spellcheck="false" placeholder="Jump to a section, project or action" role="combobox" aria-expanded="true" aria-controls="palette-list" aria-autocomplete="list">
+    </label>
+    <ul id="palette-list" role="listbox" aria-label="Results"></ul>
+    <p class="palette-foot"><span class="key">↑↓</span>Move <span class="key">Enter</span>Open <span class="key">Esc</span>Close</p>
   </div>
 </div>
 
@@ -146,17 +176,20 @@
       <dt><span class="key">Enter</span></dt><dd>Open the selected section</dd>
       <dt><span class="key">1</span>–<span class="key">4</span></dt><dd>Jump straight to a section</dd>
       <dt><span class="key">Q</span><span class="key">E</span></dt><dd>Previous / next section (← → work too)</dd>
+      <dt><span class="key">/</span></dt><dd>Quick jump to any section, project or action</dd>
       <dt><span class="key">Esc</span></dt><dd>Close a window, or go back to the menu</dd>
       <dt><span class="key">←</span><span class="key">→</span></dt><dd>Previous / next project while one is open</dd>
       <dt><span class="key">M</span></dt><dd>Sound on / off</dd>
-      <dt><span class="key">?</span></dt><dd>Show this list</dd>
+      <dt><span class="key">B</span></dt><dd>Pause / play the animated background</dd>
     </dl>
-    <button class="cv-btn" data-close><span>Got it</span></button>
+    <button class="cv-btn" data-close><span>Close</span></button>
   </div>
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
 
+<script src="js/vendor/gsap.min.js" defer></script>
+<script src="js/vendor/ScrollTrigger.min.js" defer></script>
 <script src="js/bgfx.js" defer></script>
 <script src="js/model.js" defer></script>
 <script src="js/view.js" defer></script>

@@ -1,46 +1,55 @@
-/* CONTROLLER — input, navigation and routing. Talks to Model and View. */
+/* CONTROLLER: input, navigation and routing. Talks to Model and View. */
 const Controller = {
   transitioning: true,   // locked until the intro curtain lifts
   audioUnlocked: false,
   sound: true,
   lastFocus: null,
+  pal: { items: [], sel: 0, from: null },
 
   init() {
     View.init();
     this.sound = Model.pref("sound", true); View.setSound(this.sound);
-    this.bindMenu(); this.bindKeyboard(); this.bindAudio(); this.bindContactForm(); this.bindProjects(); this.bindOverlays(); this.bindScroll();
+    Model.state.motion = Model.pref("motion", true); View.setMotion(Model.state.motion);
+    this.bindMenu(); this.bindKeyboard(); this.bindAudio(); this.bindContactForm(); this.bindProjects();
+    this.bindOverlays(); this.bindScroll(); this.bindPalette(); this.bindSkills();
     addEventListener("popstate", () => this.go(this.fromHash(), false));   // back/forward buttons
     const s = this.fromHash();
     s === "home" ? View.showScreen("home") : this.enter(s);                // deep links like /#about
     this.select(0, true);
-    View.boot(() => { this.transitioning = false; });
+    let seen = false; try { seen = sessionStorage.getItem("pf:booted") === "1"; sessionStorage.setItem("pf:booted", "1"); } catch {}
+    View.boot(!seen, () => { this.transitioning = false; });
   },
 
   /* ---------- navigation ---------- */
   fromHash() { const s = location.hash.slice(1); return Model.screens.includes(s) ? s : "home"; },
 
-  go(screen, push = true) {
-    if (this.transitioning || screen === Model.state.screen) return;
-    this.closeModal(true); this.closeHelp(true);
+  go(screen, push = true, after) {
+    if (this.transitioning) return;
+    if (screen === Model.state.screen) { after && after(); return; }
+    this.closeModal(true); this.closeHelp(true); this.closePalette(true);
     this.transitioning = true; this.play();
     if (push) history.pushState({}, "", screen === "home" ? location.pathname + location.search : "#" + screen);
     const from = Model.sections.indexOf(Model.state.screen), to = Model.sections.indexOf(screen);
-    const dir = from >= 0 && (to < from) ? -1 : 1;   // going "left" through the tabs sweeps the other way
+    const dir = from >= 0 && to < from ? -1 : 1;   // going "left" through the tabs sweeps the other way
     const label = screen === "home" ? "MENU" : screen.toUpperCase();
     const kicker = screen === "home" ? "Back to" : String(to + 1).padStart(2, "0") + " / 04";
     View.wipe(label, kicker, dir, () => this.enter(screen), () => {
       this.transitioning = false;
       if (this.fromHash() !== Model.state.screen) this.go(this.fromHash(), false);   // catch a back-press mid-wipe
+      else after && after();
     });
   },
 
   enter(screen) {
     Model.state.screen = screen;
     if (screen === "about" && !Model.state.aboutBuilt) { View.renderAbout(Model.about); Model.state.aboutBuilt = true; }
-    if (screen === "skills" && !Model.state.skillsBuilt) { View.renderSkills(Model.skills); Model.state.skillsBuilt = true; }
+    if (screen === "skills" && !Model.state.skillsBuilt) {
+      View.skProjects = Object.fromEntries(Model.projects.map((p, i) => [p.id, { p, i }]));
+      View.renderSkillTabs(Model.skills); Model.state.skillsBuilt = true;
+    }
     View.showScreen(screen);
     if (screen === "projects") this.loadProjects();
-    if (screen === "skills") View.animateSkillBars();
+    if (screen === "skills") View.showSkillGroup(Model.skills, Model.state.skillGroup, Model.state.skill, { fromZero: true });
     if (screen === "home") View.els.menuItems[Model.state.menuIndex].focus({ preventScroll: true });
     else document.getElementById("stage").focus({ preventScroll: true });
   },
@@ -58,50 +67,50 @@ const Controller = {
   },
 
   /* ---------- projects ---------- */
-  async loadProjects() {
+  loadProjects() {
     if (!Model.state.projectsBuilt) {
       const counts = Model.projects.reduce((o, p) => (o[p.cat] = (o[p.cat] || 0) + 1, o), { all: Model.projects.length });
       View.renderFilters(Model.categories, counts, Model.state.filter);
       View.renderProjects(Model.projects, Model.categories);
       View.applyFilter(Model.state.filter);
+      View.revealCards([...document.querySelectorAll("#feat-grid .card, #small-grid .card")]);
       Model.state.projectsBuilt = true;
     }
-    if (Model.state.reposLoaded) return;
-    View.skeletons();
+    if (!Model.state.reposLoaded) this.loadRepos();
+  },
+
+  async loadRepos() {
+    View.repoLoading();
     const { repos, live } = await Model.fetchRepos();
-    const status = !live ? "Couldn't reach GitHub right now. Everything above is still here."
-      : !repos.length ? "Every public repo is already featured above."
-      : `${repos.length} more ${repos.length === 1 ? "repository" : "repositories"} · live from GitHub`;
-    View.renderRepos(repos, status, Model);
-    Model.state.reposLoaded = live;   // retry next visit if GitHub was unreachable
+    if (!live) { View.repoError(); return; }      // retried on the next visit or with the button
+    View.renderRepos(repos, Model);
+    Model.state.reposLoaded = true;
   },
 
   bindProjects() {
     View.els.filters.addEventListener("click", e => {
       const b = e.target.closest("[data-filter]"); if (!b || b.dataset.filter === Model.state.filter) return;
       Model.state.filter = b.dataset.filter; this.play();
-      View.setFilter(Model.state.filter); View.applyFilter(Model.state.filter);
+      View.setFilter(Model.state.filter); View.applyFilter(Model.state.filter, true);
     });
-    const grids = [View.els.featGrid, View.els.smallGrid];
-    grids.forEach(g => g.addEventListener("click", e => {
+    [View.els.featGrid, View.els.smallGrid].forEach(g => g.addEventListener("click", e => {
       if (e.target.closest("a")) return;                                   // real links just work
       const c = e.target.closest(".card.clickable"); if (!c) return;
       this.openModal(+c.dataset.idx, e.target.closest("button") || c.querySelector("[data-open]"));
     }));
+    View.els.repoStatus.addEventListener("click", e => { if (e.target.closest("[data-retry]")) { this.play(); this.loadRepos(); } });
   },
 
-  detailList() { return Model.projects.map((p, i) => i).filter(i => Model.projects[i].highlights); },
-
   openModal(idx, from) {
-    const list = this.detailList(), pos = list.indexOf(idx); if (pos < 0) return;
+    const total = Model.projects.length;
     const wasOpen = Model.state.modal >= 0;
     Model.state.modal = idx; this.play();
-    View.renderModal(Model.projects[idx], pos, list.length, Model.categories, wasOpen);
+    View.renderModal(Model.projects[idx], idx, idx, total, Model.categories, wasOpen);
     if (!wasOpen) { this.lastFocus = from || document.activeElement; View.openOverlay(View.els.modal, View.els.modalPanel); }
   },
   stepModal(d) {
-    const list = this.detailList(), pos = list.indexOf(Model.state.modal);
-    this.openModal(list[(pos + d + list.length) % list.length]);
+    const n = Model.projects.length;
+    this.openModal((Model.state.modal + d + n) % n);
   },
   closeModal(quiet) {
     if (Model.state.modal < 0) return;
@@ -109,10 +118,111 @@ const Controller = {
     if (!quiet) { this.play(); this.lastFocus?.focus?.({ preventScroll: true }); }
   },
 
+  // From a skill's "Used in" link or the palette: go to Projects, make sure the card is visible, open its details.
+  showProject(idx) {
+    const p = Model.projects[idx];
+    this.go("projects", true, () => {
+      if (Model.state.filter !== "all" && Model.state.filter !== p.cat) {
+        Model.state.filter = "all"; View.setFilter("all"); View.applyFilter("all");
+      }
+      View.flashCard(idx);
+      this.openModal(idx, document.querySelector(`.card[data-idx="${idx}"] [data-open]`));
+    });
+  },
+
+  selectGroup(gi, focus) {
+    const n = Model.skills.length; gi = (gi + n) % n;
+    if (gi === Model.state.skillGroup) return;
+    Model.state.skillGroup = gi; Model.state.skill = 0; this.play();
+    View.showSkillGroup(Model.skills, gi, 0);
+    if (focus) document.getElementById("sk-tab-" + gi).focus();
+  },
+  selectSkill(si, sound = true) {
+    if (si === Model.state.skill) return;
+    Model.state.skill = si; if (sound) this.play();
+    View.showSkill(Model.skills[Model.state.skillGroup], si);
+  },
+
+  bindSkills() {
+    const body = View.els.skillsBody;
+    body.addEventListener("click", e => {
+      const proj = e.target.closest("[data-project]"); if (proj) { this.showProject(+proj.dataset.project); return; }
+      const tab = e.target.closest("[data-group]"); if (tab) { this.selectGroup(+tab.dataset.group); return; }
+      const sk = e.target.closest("[data-si]"); if (sk) this.selectSkill(+sk.dataset.si);
+    });
+    // hovering a row or a chart label previews it, like moving a cursor through a game menu
+    body.addEventListener("pointerover", e => {
+      if (e.pointerType !== "mouse") return;
+      const sk = e.target.closest(".sk-item, #sk-radar [data-si]"); if (sk) this.selectSkill(+sk.dataset.si);
+    });
+    body.addEventListener("keydown", e => {
+      if (e.target.closest(".sk-groups") && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+        e.preventDefault(); e.stopPropagation(); this.selectGroup(Model.state.skillGroup + (e.key === "ArrowRight" ? 1 : -1), true);
+      } else if (e.target.closest(".sk-item") && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+        e.preventDefault();
+        const items = [...body.querySelectorAll(".sk-item")], i = (Model.state.skill + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+        this.selectSkill(i); items[i].focus();
+      }
+    });
+  },
+
+  /* ---------- help ---------- */
   openHelp() { if (!View.els.help.hidden) return; this.helpFocus = document.activeElement; View.openOverlay(View.els.help); },
   closeHelp(quiet) {
     if (View.els.help.hidden || !View.els.help.classList.contains("open")) return;
     View.closeOverlay(View.els.help); if (!quiet) this.helpFocus?.focus?.({ preventScroll: true });
+  },
+
+  /* ---------- quick jump palette ---------- */
+  paletteSource() {
+    const go = s => () => this.go(s);
+    return [
+      ...Model.sections.map((s, i) => ({ label: s[0].toUpperCase() + s.slice(1), kind: "Section " + (i + 1), run: go(s) })),
+      { label: "Main menu", kind: "Section", run: go("home") },
+      ...Model.projects.map((p, i) => ({ label: View.nice(p.title), kind: p.cat === "small" ? "Smaller build" : "Project", color: p.color, keys: (p.stack || []).join(" ") + " " + p.tag, run: () => this.showProject(i) })),
+      ...Model.projects.flatMap(p => (p.links || []).filter(l => /live|download/i.test(l.label)).map(l => ({ label: `${l.label}: ${View.nice(p.title)}`, kind: "Opens new tab", color: p.color, run: () => open(l.url, "_blank", "noopener") }))),
+      { label: "Download CV (PDF)", kind: "File", keys: "resume", run: () => { const a = document.createElement("a"); a.href = "assets/resume/Resume.pdf"; a.download = "Resume.pdf"; a.click(); } },
+      { label: "GitHub profile", kind: "Opens new tab", run: () => open("https://github.com/" + Model.githubUser, "_blank", "noopener") },
+      { label: "Send me a message", kind: "Contact", keys: "email form", run: () => this.go("contact", true, () => document.querySelector("#contact-form [name=name]").focus()) },
+      { label: () => (this.sound ? "Turn sound off" : "Turn sound on"), kind: "Setting", keys: "audio mute", run: () => this.toggleSound() },
+      { label: () => (Model.state.motion ? "Pause background animation" : "Play background animation"), kind: "Setting", keys: "motion", run: () => this.toggleMotion() },
+      { label: "Keyboard controls", kind: "Help", keys: "shortcuts", run: () => this.openHelp() },
+    ];
+  },
+  filterPalette() {
+    const q = View.els.paletteInput.value.trim().toLowerCase();
+    this.pal.items = this.paletteSource().map(it => ({ ...it, label: typeof it.label === "function" ? it.label() : it.label }))
+      .filter(it => !q || (it.label + " " + it.kind + " " + (it.keys || "")).toLowerCase().includes(q));
+    this.pal.sel = 0; View.renderPalette(this.pal.items, 0);
+  },
+  openPalette() {
+    if (!View.els.palette.hidden) return;
+    this.closeModal(true); this.closeHelp(true);
+    this.pal.from = document.activeElement; View.els.paletteInput.value = ""; this.filterPalette();
+    View.openOverlay(View.els.palette, View.els.paletteInput); this.play();
+  },
+  closePalette(quiet) {
+    if (View.els.palette.hidden || !View.els.palette.classList.contains("open")) return;
+    View.closeOverlay(View.els.palette); if (!quiet) this.pal.from?.focus?.({ preventScroll: true });
+  },
+  runPalette(i) {
+    const it = this.pal.items[i]; if (!it) return;
+    this.closePalette(true); it.run();
+  },
+  bindPalette() {
+    const inp = View.els.paletteInput;
+    document.getElementById("palette-btn").addEventListener("click", () => this.openPalette());
+    inp.addEventListener("input", () => this.filterPalette());
+    inp.addEventListener("keydown", e => {
+      const n = this.pal.items.length;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault(); if (!n) return;
+        this.pal.sel = (this.pal.sel + (e.key === "ArrowDown" ? 1 : -1) + n) % n; View.renderPalette(this.pal.items, this.pal.sel);
+      } else if (e.key === "Enter") { e.preventDefault(); this.runPalette(this.pal.sel); }
+      else if (e.key === "Escape") { e.preventDefault(); this.closePalette(); }
+    });
+    View.els.paletteList.addEventListener("click", e => { const li = e.target.closest("[data-i]"); if (li) this.runPalette(+li.dataset.i); });
+    View.els.palette.addEventListener("click", e => { if (e.target.closest(".overlay-bg")) this.closePalette(); });
   },
 
   bindOverlays() {
@@ -123,10 +233,11 @@ const Controller = {
     View.els.help.addEventListener("click", e => { if (e.target.closest("[data-close]")) this.closeHelp(); });
     document.getElementById("help-btn").addEventListener("click", () => this.openHelp());
     View.els.soundBtn.addEventListener("click", () => this.toggleSound());
+    View.els.motionBtn.addEventListener("click", () => this.toggleMotion());
     // keep Tab inside an open dialog
-    [View.els.modal, View.els.help].forEach(o => o.addEventListener("keydown", e => {
+    [View.els.modal, View.els.help, View.els.palette].forEach(o => o.addEventListener("keydown", e => {
       if (e.key !== "Tab") return;
-      const f = [...o.querySelectorAll("a[href],button")].filter(x => x.offsetParent);
+      const f = [...o.querySelectorAll("a[href],button,input")].filter(x => x.offsetParent);
       if (!f.length) return;
       const first = f[0], last = f[f.length - 1];
       if (e.shiftKey && (document.activeElement === first || !o.contains(document.activeElement))) { last.focus(); e.preventDefault(); }
@@ -139,14 +250,18 @@ const Controller = {
     Object.values(View.els.screens).forEach(s => s.addEventListener("scroll", () => {
       if (s.classList.contains("active")) View.updateScroll(s);
     }, { passive: true }));
-    View.els.toTop.addEventListener("click", () => { View.els.screens[Model.state.screen].scrollTop = 0; this.play(); });
+    View.els.toTop.addEventListener("click", () => { View.els.screens[Model.state.screen].scrollTop = 0; this.play(); document.getElementById("stage").focus({ preventScroll: true }); });
   },
 
-  /* ---------- sound ---------- */
+  /* ---------- sound + motion settings (remembered per browser) ---------- */
   play() { if (this.audioUnlocked && this.sound) View.playSelect(); },
   toggleSound() {
     this.sound = !this.sound; Model.setPref("sound", this.sound); View.setSound(this.sound);
     View.toast(this.sound ? "Sound on" : "Sound off"); this.play();
+  },
+  toggleMotion() {
+    Model.state.motion = !Model.state.motion; Model.setPref("motion", Model.state.motion); View.setMotion(Model.state.motion);
+    View.toast(Model.state.motion ? "Background animation on" : "Background animation paused"); this.play();
   },
 
   bindAudio() {   // browsers block sound until the first gesture
@@ -163,14 +278,15 @@ const Controller = {
       item.addEventListener("click", () => this.go(item.dataset.target));
     });
     document.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", () => this.go(b.dataset.nav)));
-    document.getElementById("big-name").addEventListener("click", () => this.play());
   },
 
   bindKeyboard() {
     addEventListener("keydown", e => {
-      if (e.ctrlKey || e.metaKey || e.altKey || e.target.closest("input,textarea")) return;
       const k = e.key, home = Model.state.screen === "home";
+      if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === "k") { e.preventDefault(); View.els.palette.hidden ? this.openPalette() : this.closePalette(); return; }
+      if (e.ctrlKey || e.metaKey || e.altKey || e.target.closest("input,textarea")) return;
 
+      if (!View.els.palette.hidden) return;
       if (!View.els.help.hidden) { if (k === "Escape" || k === "?") { this.closeHelp(); e.preventDefault(); } return; }
       if (Model.state.modal >= 0) {
         if (k === "Escape") this.closeModal();
@@ -178,8 +294,10 @@ const Controller = {
         else if (k === "ArrowLeft") this.stepModal(-1);
         return;
       }
+      if (k === "/") { e.preventDefault(); this.openPalette(); return; }
       if (k === "?") { this.openHelp(); return; }
       if (k === "m" || k === "M") { this.toggleSound(); return; }
+      if (k === "b" || k === "B") { this.toggleMotion(); return; }
       if (k >= "1" && k <= "4") { this.go(Model.sections[+k - 1]); return; }
 
       if (home) {
@@ -189,8 +307,8 @@ const Controller = {
         else if (k === "Enter" && !e.target.closest("button,a")) this.go(View.els.menuItems[i].dataset.target);
       } else {
         if (k === "Escape") { this.go("home"); e.preventDefault(); }
-        else if (k === "q" || k === "Q" || (k === "ArrowLeft" && !e.target.closest(".filters"))) this.step(-1);
-        else if (k === "e" || k === "E" || (k === "ArrowRight" && !e.target.closest(".filters"))) this.step(1);
+        else if (k === "q" || k === "Q" || (k === "ArrowLeft" && !e.target.closest(".filters,.sk-groups"))) this.step(-1);
+        else if (k === "e" || k === "E" || (k === "ArrowRight" && !e.target.closest(".filters,.sk-groups"))) this.step(1);
       }
     });
   },
@@ -200,13 +318,14 @@ const Controller = {
     const form = document.getElementById("contact-form"), status = document.getElementById("form-status"), btn = form.querySelector(".form-send");
     const counter = document.getElementById("msg-count"), fields = ["name", "email", "message"];
     const count = () => (counter.textContent = `${form.message.value.length} / 3000`);
+    const setErr = (f, msg) => { const fl = form[f].closest(".field"); fl.querySelector(".err").textContent = msg; form[f].setAttribute("aria-invalid", !!msg); if (msg) { fl.classList.remove("bad"); void fl.offsetWidth; fl.classList.add("bad"); } else fl.classList.remove("bad"); };
     // restore an unsent draft
     const draft = Model.pref("draft", null);
     if (draft) fields.forEach(f => { if (draft[f]) form[f].value = draft[f]; });
     count();
     let saveT = 0;
     form.addEventListener("input", e => {
-      e.target.closest(".field")?.classList.remove("bad");
+      if (fields.includes(e.target.name)) setErr(e.target.name, "");
       if (e.target === form.message) count();
       clearTimeout(saveT); saveT = setTimeout(() => Model.setPref("draft", Object.fromEntries(fields.map(f => [f, form[f].value]))), 400);
     });
@@ -216,26 +335,27 @@ const Controller = {
       e.preventDefault();
       const d = Object.fromEntries(new FormData(form).entries());
       if (d._honey) return;
-      const bad = fields.filter(f => !d[f].trim() || (f === "email" && !form.email.checkValidity()));
-      if (bad.length) {
-        bad.forEach(f => { const fl = form[f].closest(".field"); fl.classList.remove("bad"); void fl.offsetWidth; fl.classList.add("bad"); });
-        form[bad[0]].focus();
-        status.textContent = bad.includes("email") && d.email.trim() ? "That email address doesn't look right." : "Fill in your name, email and message first.";
-        return;
-      }
-      btn.disabled = true; status.textContent = "Sending…";
+      const errs = {
+        name: d.name.trim() ? "" : "Add your name so I know who's writing.",
+        email: !d.email.trim() ? "Add an email so I can reply." : form.email.checkValidity() ? "" : "That email address doesn't look complete (example: name@domain.com).",
+        message: d.message.trim() ? "" : "Write a message before sending.",
+      };
+      fields.forEach(f => setErr(f, errs[f]));
+      const bad = fields.filter(f => errs[f]);
+      if (bad.length) { form[bad[0]].focus(); status.textContent = "Fix the highlighted field" + (bad.length > 1 ? "s" : "") + " and send again."; return; }
+      btn.disabled = true; btn.querySelector("span").textContent = "Sending…"; status.textContent = "Sending your message…";
       try {
         const res = await fetch(`https://formsubmit.co/ajax/${Model.contactEmail}`, {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({ name: d.name, email: d.email, message: d.message, _subject: `Portfolio message from ${d.name}` }),
         });
         if (!res.ok) throw new Error(res.status);
-        status.textContent = "Sent! I'll get back to you soon."; View.toast("Message sent ✓");
+        status.textContent = "Sent. I'll reply to " + d.email + " soon."; View.toast("Message sent");
         form.reset(); count(); Model.setPref("draft", null); this.play();
       } catch {
-        status.textContent = "Couldn't reach the relay. Opening your email app instead…";
+        status.textContent = "The form relay didn't respond, so I'm opening your email app with the message filled in.";
         location.href = `mailto:${Model.contactEmail}?subject=${encodeURIComponent("Portfolio message from " + d.name)}&body=${encodeURIComponent(d.message + "\n\nReply to: " + d.email)}`;
-      } finally { btn.disabled = false; }
+      } finally { btn.disabled = false; btn.querySelector("span").textContent = "Send message"; }
     });
   },
 };

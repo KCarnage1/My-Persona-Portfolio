@@ -1,9 +1,9 @@
-/* MODEL — data and state only. Never touches the DOM. */
+/* MODEL: data and state only. Never touches the DOM. */
 const Model = {
   githubUser: "KCarnage1",
   contactEmail: "rajesholbis@gmail.com",   // contact form target (formsubmit.co relay)
 
-  state: { screen: "home", menuIndex: 0, reposLoaded: false, skillsBuilt: false, aboutBuilt: false, projectsBuilt: false, filter: "all", modal: -1 },
+  state: { skillGroup: 0, skill: 0, screen: "home", menuIndex: 0, reposLoaded: false, skillsBuilt: false, aboutBuilt: false, projectsBuilt: false, filter: "all", modal: -1, motion: true },
   screens: ["home", "projects", "skills", "about", "contact"],
   sections: ["projects", "skills", "about", "contact"],
   captions: {
@@ -75,7 +75,7 @@ const Model = {
       links: [{ label: "Code", url: "https://github.com/KCarnage1/UltraNiko-Updated", primary: true }],
     },
     {
-      id: "portfolio", repo: "My-Persona-Portfolio", cat: "web", year: "2026", color: "#e60012", cover: "THIS SITE",
+      id: "portfolio", repo: "My-Persona-Portfolio", cat: "web", year: "2026", color: "#e60012", ink: "#fff", cover: "THIS SITE",
       title: "PERSONA PORTFOLIO", tag: "Vanilla JS",
       desc: "The site you're on. A Persona 3/5-inspired portfolio in plain HTML, CSS and JavaScript, with no framework and no build step.",
       highlights: [
@@ -83,16 +83,17 @@ const Model = {
         "An animated canvas background for every section, with mouse parallax.",
         "Hash routing, so back and forward buttons and deep links like #about work.",
         "Live GitHub repository feed with a 10-minute cache.",
-        "Full keyboard control (arrows, number keys, Q/E tabs, Esc) and reduced-motion support.",
+        "Full keyboard control (arrows, number keys, Q/E tabs, a / quick-jump menu, Esc) and reduced-motion support.",
+        "A Persona 3-style calendar on the home screen that shows the real date, time of day and moon phase.",
       ],
-      stack: ["HTML", "CSS", "JavaScript", "Canvas", "GitHub API"],
+      stack: ["HTML", "CSS", "JavaScript", "Canvas", "GSAP", "GitHub API"],
       links: [{ label: "Code", url: "https://github.com/KCarnage1/My-Persona-Portfolio", primary: true }],
     },
 
     // smaller builds (no public repo yet → card shows "Repo coming soon")
     { id: "task-manager", cat: "small", color: "#3dc8ff", cover: "TASKS", title: "CLOUD TASK MANAGER", tag: "Full-Stack",
       desc: "Full-stack task manager with user accounts, task creation and status tracking. HTML, CSS, JavaScript and a Java backend, deployed on a cloud virtual machine with input validation and access control." },
-    { id: "backup-tool", cat: "small", color: "#3572A5", cover: "BACKUP", title: "CLOUD BACKUP TOOL", tag: "Python",
+    { id: "backup-tool", cat: "small", color: "#5b9bd5", cover: "BACKUP", title: "CLOUD BACKUP TOOL", tag: "Python",
       desc: "Python script that watches a folder, compresses new files and uploads them to cloud storage on a schedule. Keeps a log and retries failed uploads so nothing gets lost quietly." },
     { id: "monitoring", cat: "small", color: "#e8a33d", cover: "MONITOR", title: "SERVER MONITORING DASHBOARD", tag: "Dashboard",
       desc: "Tracks CPU, memory and disk usage on a server and shows it as live charts in the browser. Python collects the data; the front end is JavaScript, HTML and CSS." },
@@ -103,28 +104,52 @@ const Model = {
   hiddenRepos: ["KCarnage1"],   // repos never shown in the live feed (profile README etc.)
   langColors: { JavaScript: "#f1e05a", TypeScript: "#3178c6", Python: "#3572A5", Java: "#b07219", "C++": "#f34b7d", "C#": "#178600", C: "#555", HTML: "#e34c26", CSS: "#663399", Shell: "#89e051", Lua: "#000080", Luau: "#00a2ff", Dockerfile: "#384d54", "Jupyter Notebook": "#DA5B0B", PHP: "#4F5D95" },
 
+  // Self-rated levels out of 100. `short` is the label on the hexagon chart; `uses` lists project ids where the skill was used.
+  // Rank on screen is derived from the level: under 50 = 1, 50s = 2, 60s = 3, 70s = 4, 80+ = 5.
   skills: [
-    { group: "Languages", items: [["Python", 75], ["Java", 70], ["JavaScript", 72], ["TypeScript", 58], ["HTML · CSS", 78], ["C++", 60]] },
-    { group: "Cloud & Systems", items: [["Git & GitHub", 78], ["Linux Command Line", 65], ["Cloud Virtual Machines", 62], ["Cloud Storage", 58], ["Supabase · PostgreSQL", 55], ["Networking Basics", 50]] },
-    { group: "Building", items: [["Full-Stack Web Apps", 70], ["React · Next.js", 58], ["Desktop Apps (Electron)", 60], ["Backend Systems", 62], ["Automation & Scripting", 70], ["Game Modding", 55]] },
+    { group: "Languages", blurb: "What I write code in.", items: [
+      { name: "Python", short: "Python", v: 75, uses: ["backup-tool", "monitoring"] },
+      { name: "Java", short: "Java", v: 70, uses: ["task-manager", "library"] },
+      { name: "JavaScript", short: "JS", v: 72, uses: ["fnaz", "portfolio", "monitoring"] },
+      { name: "TypeScript", short: "TS", v: 58, uses: ["jiran-connect"] },
+      { name: "HTML · CSS", short: "HTML/CSS", v: 78, uses: ["portfolio", "jiran-connect", "task-manager"] },
+      { name: "C++", short: "C++", v: 60, uses: ["library"] }] },
+    { group: "Cloud & Systems", blurb: "Where the code runs and how it gets there.", items: [
+      { name: "Git & GitHub", short: "Git", v: 78, uses: ["jiran-connect", "fnaz", "ultraniko", "portfolio"] },
+      { name: "Linux Command Line", short: "Linux", v: 65, uses: [] },
+      { name: "Cloud Virtual Machines", short: "VMs", v: 62, uses: ["task-manager"] },
+      { name: "Cloud Storage", short: "Storage", v: 58, uses: ["backup-tool"] },
+      { name: "Supabase · PostgreSQL", short: "Postgres", v: 55, uses: ["jiran-connect"] },
+      { name: "Networking Basics", short: "Network", v: 50, uses: ["fnaz"] }] },
+    { group: "Building", blurb: "The kinds of things I make.", items: [
+      { name: "Full-Stack Web Apps", short: "Full-stack", v: 70, uses: ["jiran-connect", "task-manager"] },
+      { name: "React · Next.js", short: "React", v: 58, uses: ["jiran-connect"] },
+      { name: "Desktop Apps (Electron)", short: "Desktop", v: 60, uses: ["fnaz"] },
+      { name: "Backend Systems", short: "Backend", v: 62, uses: ["task-manager"] },
+      { name: "Automation & Scripting", short: "Scripts", v: 70, uses: ["backup-tool"] },
+      { name: "Game Modding", short: "Modding", v: 55, uses: ["ultraniko"] }] },
   ],
+  rank: v => (v >= 80 ? 5 : v >= 70 ? 4 : v >= 60 ? 3 : v >= 50 ? 2 : 1),
 
-  // **double asterisks** become highlights. First item is the lead paragraph.
+  // About, in chapters. **double asterisks** become highlights; the first paragraph is the lead.
   about: [
-    "I'm an undergraduate majoring in **Information Technology,** mostly interested in **software development and cloud engineering.** I like knowing what actually happens behind an app, from the code you see on screen to the servers keeping it online.",
-    "I learn best by **building something, breaking it, and working out why it broke.** Most of what I know came from small projects where I got stuck, looked things up, and eventually got them working.",
-    "Right now I'm interested in **cloud infrastructure, web development, backend systems, and automation.** I especially like projects where I can take a rough idea and turn it into something people can really use.",
-    "Lately I've been shipping bigger things: **Jiran Connect,** a bilingual community platform built with Next.js and Supabase, and **Five Nights at Zayed's,** a desktop horror game with online multiplayer over WebRTC. You can find both in the Projects section.",
-    "One of my earlier projects is a **cloud-hosted task manager**: a full-stack app with user accounts, task creation, and status tracking, built with HTML, CSS, JavaScript, and a Java backend, then deployed on a cloud virtual machine. Setting up the server myself taught me more than the coding did, and I added basic input validation and access control along the way.",
-    "I also built an **automated cloud backup tool**, a Python script that watches a folder, compresses new files, and uploads them to cloud storage on a schedule. It keeps a log and retries failed uploads, so nothing gets lost quietly. It was my first proper experience with a cloud storage API.",
-    "Another is a **server monitoring dashboard** that tracks CPU, memory, and disk usage and shows it as live charts in the browser. Python collects the data, and the front end is JavaScript, HTML, and CSS.",
-    "I also made a **library management system** in Java for managing books, members, and loans, built around object-oriented design with file-based storage. I rewrote the core logic in C++ to see how the two languages differ in structure and memory handling.",
-    "Languages and tools I've worked with include **Python, C++, Java, JavaScript, TypeScript, HTML, CSS, Git and GitHub, VS Code, the Linux command line,** and the basics of cloud platforms such as **virtual machines, storage, and networking.**",
-    "I'd say **problem-solving and consistency** are my strongest qualities. When something breaks, I'd rather find the real cause than patch over it, even if that takes longer.",
-    "I also value **curiosity, independent learning, clear communication, teamwork,** and helping others when I can.",
-    "Outside academics, I like **gaming,** mainly because a good game is just a long series of problems to figure out, and **swimming,** which helps me stay active and clear my head.",
-    { quote: "The important thing is not to stop questioning.", by: "Albert Einstein" },
-    "Right now I'm building up my fundamentals in **cloud engineering:** how applications get deployed, scaled, and kept secure. I'm planning a personal project that deploys a web app from start to finish with automated deployment and monitoring, so I can practise this in a real setup instead of just reading about it.",
+    { h: "Who I am", items: [
+      "I'm an undergraduate majoring in **Information Technology,** mostly interested in **software development and cloud engineering.** I like knowing what actually happens behind an app, from the code you see on screen to the servers keeping it online.",
+      "I learn best by **building something, breaking it, and working out why it broke.** Most of what I know came from small projects where I got stuck, looked things up, and eventually got them working.",
+    ] },
+    { h: "What I've built", items: [
+      "Lately I've been shipping bigger things: **Jiran Connect,** a bilingual community platform built with Next.js and Supabase, and **Five Nights at Zayed's,** a desktop horror game with online multiplayer over WebRTC.",
+      "Before that came a **cloud-hosted task manager** (HTML, CSS, JavaScript and a Java backend on a cloud virtual machine), an **automated cloud backup tool** in Python, a **server monitoring dashboard** with live charts, and a **library management system** in Java that I rewrote in C++ to compare the two. Setting up the server for the task manager taught me more than the coding did.",
+    ] },
+    { h: "How I work", items: [
+      "I'd say **problem-solving and consistency** are my strongest qualities. When something breaks, I'd rather find the real cause than patch over it, even if that takes longer.",
+      "I also value **curiosity, independent learning, clear communication and teamwork,** and I help others when I can.",
+      { quote: "The important thing is not to stop questioning.", by: "Albert Einstein" },
+    ] },
+    { h: "Right now", items: [
+      "I'm building up my fundamentals in **cloud engineering:** how applications get deployed, scaled and kept secure. Next I want to deploy a web app from start to finish with automated deployment and monitoring, so I practise this in a real setup instead of only reading about it.",
+      "Outside of code I like **gaming,** because a good game is a long series of problems to figure out, and **swimming,** which keeps me active and clears my head.",
+    ] },
   ],
 
   /* ---------- preferences (per browser) ---------- */

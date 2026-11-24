@@ -1,4 +1,4 @@
-/* BGFX — animated Persona-3-style wallpapers, one scene per screen, drawn on a canvas (no video files).
+/* BGFX: animated Persona-3-style wallpapers, one scene per screen, drawn on a canvas (no video files).
    home: moon + clock ring · projects: Dark Hour · skills: Velvet Room · about: dusk city · contact: rainy night */
 (() => {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches, R = Math.random, TAU = Math.PI * 2;
@@ -21,7 +21,8 @@
   const resize = () => { const k = Math.min(devicePixelRatio || 1, 1.5); W = c.width = innerWidth * k; H = c.height = innerHeight * k; m = Math.min(W, H); };
   addEventListener("resize", resize); resize();
   addEventListener("mousemove", e => { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; }, { passive: true });
-  new MutationObserver(() => { scene = document.body.dataset.screen; if (reduced) requestAnimationFrame(frame); }).observe(document.body, { attributes: true, attributeFilter: ["data-screen"] });
+  let paused = false, lastT = 0, running = false;
+  new MutationObserver(() => { scene = document.body.dataset.screen; if (reduced || paused) requestAnimationFrame(still); }).observe(document.body, { attributes: true, attributeFilter: ["data-screen"] });
 
   const fill = stops => { const g = ctx.createLinearGradient(0, 0, 0, H); stops.forEach((s, i) => g.addColorStop(i / (stops.length - 1), s)); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
   const glow = (x, y, r, rgb, a) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); };
@@ -44,8 +45,11 @@
   const scenes = {
     home(t) {
       fill(["#010512", "#05235e", "#0a4ab8"]);
-      const x = W * .78 - sx * 40, y = H * .24 - sy * 30, r = m * .13;
-      glow(x, y, r * 3.2, "120,220,255", .4); disc(x, y, r, "#d8f6ff"); disc(x + Math.sin(t / 9000) * r * 1.1, y, r * 1.02, "#05235e");
+      // the moon shows today's real phase (same maths as the home-screen calendar)
+      const x = W * .74 - sx * 40, y = H * .23 - sy * 30, r = m * .13;
+      const f = ((((Date.now() - Date.UTC(2000, 0, 6, 18, 14)) / 864e5) % 29.530589) + 29.530589) % 29.530589 / 29.530589;
+      const off = f < .5 ? -r * 2.1 * (f / .5) : r * 2.1 * (1 - (f - .5) / .5);
+      glow(x, y, r * 3.2, "120,220,255", .4); disc(x, y, r, "#d8f6ff"); if (Math.abs(off) < r * 2.05) disc(x + off, y, r * 1.02, "#05235e");
       ring(W * .28 - sx * 70, H * .62 - sy * 50, m * .62, t / 60000, "160,235,255", 12);
       drawShards("120,215,255", "220,250,255");
     },
@@ -93,10 +97,16 @@
     },
   };
 
+  // one static frame: used for reduced motion and when the visitor pauses the background
+  function still() { (scenes[scene] || scenes.home)(lastT); }
   function frame(t) {
-    sx += (mx - sx) * .05; sy += (my - sy) * .05;
-    (scenes[scene] || scenes.home)(reduced ? 0 : t);
-    if (!reduced) requestAnimationFrame(frame);
+    if (paused || reduced) { running = false; return; }
+    sx += (mx - sx) * .05; sy += (my - sy) * .05; lastT = t;
+    (scenes[scene] || scenes.home)(t);
+    requestAnimationFrame(frame);
   }
-  requestAnimationFrame(frame);
+  function start() { if (!running && !paused && !reduced) { running = true; requestAnimationFrame(frame); } }
+  addEventListener("resize", () => { if (paused || reduced) requestAnimationFrame(still); });
+  window.BGFX = { setPaused(p) { paused = p; p ? requestAnimationFrame(still) : start(); } };
+  reduced ? requestAnimationFrame(still) : start();
 })();

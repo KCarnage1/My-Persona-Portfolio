@@ -1,4 +1,4 @@
-/* VIEW — everything that draws. No app logic. */
+/* VIEW: everything that draws. No app logic. */
 const View = {
   reduced: matchMedia("(prefers-reduced-motion: reduce)").matches,
   forceBox: { CLOUD: ["O"], IT: ["T"] },
@@ -16,7 +16,8 @@ const View = {
       cursor: $("#cursor"), clock: $("#clock"), caption: $("#menu-caption span"),
       progress: $("#progress"), toTop: $("#to-top"), toast: $("#toast"),
       modal: $("#modal"), modalPanel: $("#modal .modal-panel"), modalBody: $("#modal-body"),
-      help: $("#help"), soundBtn: $("#sound-toggle"),
+      palette: $("#palette"), paletteInput: $("#palette-input"), paletteList: $("#palette-list"),
+      help: $("#help"), soundBtn: $("#sound-toggle"), motionBtn: $("#motion-toggle"),
     });
     document.querySelectorAll(".screen").forEach(s => (this.els.screens[s.id.replace("screen-", "")] = s));
     this.els.menuItems = [...document.querySelectorAll(".menu-item")];
@@ -24,6 +25,8 @@ const View = {
     this.els.menuItems.forEach((m, i) => m.style.setProperty("--m", i));
     document.querySelectorAll("[data-ransom]").forEach(el => this.ransomize(el));
     this.els.sfx.volume = 0.4;
+    this.gsap = !this.reduced && window.gsap && window.ScrollTrigger ? window.gsap : null;
+    if (this.gsap) this.gsap.registerPlugin(ScrollTrigger);
     this.startClock(); this.startParallax(); this.startCursor(); this.startTilt();
   },
 
@@ -35,7 +38,7 @@ const View = {
   ransomize(el, text = el.dataset.ransom) {
     const forced = this.forceBox[text] || [];
     el.textContent = "";
-    el.setAttribute("aria-label", text);
+    const label = document.createElement("span"); label.className = "sr-only"; label.textContent = text; el.appendChild(label);
     [...text].forEach((c, i) => {
       const s = document.createElement("span"), h = this.hash(text + i);
       s.className = "ch"; s.textContent = c; s.style.setProperty("--i", i); s.setAttribute("aria-hidden", "true");
@@ -66,6 +69,7 @@ const View = {
       }), { root: s, threshold: 0.12 });
       sr.forEach(e => this.io.observe(e));
     }
+    if (this.gsap) requestAnimationFrame(() => ScrollTrigger.refresh());
   },
 
   setMenuSelection(i, caption) {
@@ -81,8 +85,29 @@ const View = {
     this.els.toTop.classList.toggle("show", s.classList.contains("sub") && s.scrollTop > 500);
   },
 
+  /* ---------- Persona 3-style calendar (real date, time of day, moon phase) ---------- */
+  renderCalendar(d = new Date()) {
+    const h = d.getHours(), wd = d.getDay();
+    document.getElementById("cal-md").textContent = `${d.getMonth() + 1}/${d.getDate()}`;
+    const w = document.getElementById("cal-wd");
+    w.textContent = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"][wd];
+    w.className = "cal-wd" + (wd === 0 ? " sun" : "");
+    const phase = h === 0 ? "Dark Hour" : h < 5 ? "Late Night" : h < 7 ? "Early Morning" : h < 12 ? "Morning" : h < 13 ? "Lunchtime"
+      : h < 16 ? "Afternoon" : h < 18 ? "After School" : "Evening";
+    const p = document.getElementById("cal-phase"); p.textContent = phase; p.classList.toggle("dark", h === 0);
+    // moon age from a known new moon (2000-01-06 18:14 UTC), synodic month 29.53 days
+    const age = (((d - Date.UTC(2000, 0, 6, 18, 14)) / 864e5) % 29.530589 + 29.530589) % 29.530589, f = age / 29.530589;
+    const names = ["New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous", "Full Moon", "Waning Gibbous", "Last Quarter", "Waning Crescent"];
+    document.getElementById("cal-moon").textContent = names[Math.floor(f * 8 + 0.5) % 8];
+    // lit area: outer half-circle on the lit side, inner ellipse whose width follows the phase
+    const r = 17, k = Math.cos(f * 2 * Math.PI) * r, wax = f < 0.5;
+    const outer = `M20 3 A${r} ${r} 0 0 ${wax ? 1 : 0} 20 37`;
+    const inner = `A${Math.abs(k)} ${r} 0 0 ${wax === (k > 0) ? 0 : 1} 20 3`;
+    document.getElementById("moon-lit").setAttribute("d", outer + " " + inner + " Z");
+  },
+
   // Three skewed panes sweep across with the destination's name; swap() runs while the screen is fully covered.
-  // dir = 1 sweeps left→right, -1 right→left (used when going back through the tabs).
+  // dir = 1 sweeps left to right, -1 right to left (used when going back through the tabs).
   wipe(label, kicker, dir, swap, done) {
     if (this.reduced) { swap(); done(); return; }
     const w = this.els.wipe, panes = [...w.querySelectorAll(".pane")], lab = w.querySelector(".wipe-label");
@@ -90,34 +115,41 @@ const View = {
     const T = x => `translateX(${x * dir}%) skewX(-14deg)`;
     const opt = (d, i) => ({ duration: d, delay: i * 60, easing: "cubic-bezier(.76,0,.24,1)", fill: "both" });
     w.style.display = "block";
-    lab.animate([{ opacity: 0, transform: `translateX(${-60 * dir}px) skewX(-8deg)` }, { opacity: 1, transform: "none" }], { duration: 320, delay: 260, easing: "cubic-bezier(.2,.8,.2,1)", fill: "both" });
-    Promise.all(panes.map((p, i) => p.animate([{ transform: T(-130) }, { transform: T(0) }], opt(420, i)).finished))
-      .then(() => new Promise(r => setTimeout(r, 170)))
+    lab.animate([{ opacity: 0, transform: `translateX(${-60 * dir}px) skewX(-8deg)` }, { opacity: 1, transform: "none" }], { duration: 300, delay: 240, easing: "cubic-bezier(.2,.8,.2,1)", fill: "both" });
+    Promise.all(panes.map((p, i) => p.animate([{ transform: T(-130) }, { transform: T(0) }], opt(400, i)).finished))
+      .then(() => new Promise(r => setTimeout(r, 150)))
       .then(() => {
         swap();
-        lab.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: `translateX(${80 * dir}px)` }], { duration: 240, easing: "ease-in", fill: "both" });
-        return Promise.all(panes.map((p, i) => p.animate([{ transform: T(0) }, { transform: T(130) }], opt(480, 2 - i)).finished));
+        lab.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: `translateX(${80 * dir}px)` }], { duration: 220, easing: "ease-in", fill: "both" });
+        return Promise.all(panes.map((p, i) => p.animate([{ transform: T(0) }, { transform: T(130) }], opt(460, 2 - i)).finished));
       })
       .then(() => { w.style.display = "none"; [...panes, lab].forEach(p => p.getAnimations().forEach(a => a.cancel())); done(); });
   },
 
-  // First paint: the panes start covering the screen and slide away.
-  boot(done) {
-    const body = document.body;
+  // First visit in a session: the panes start covering the screen with a short title card, then slide away.
+  // Any key or click skips it; later visits in the same session skip it entirely.
+  boot(full, done) {
+    const body = document.body, w = this.els.wipe, panes = [...w.querySelectorAll(".pane")], lab = w.querySelector(".wipe-label");
     if (this.reduced) { body.classList.remove("booting"); done(); return; }
-    const w = this.els.wipe, panes = [...w.querySelectorAll(".pane")], lab = w.querySelector(".wipe-label");
+    let left = false;
+    const leave = () => {
+      if (left) return; left = true;
+      removeEventListener("keydown", leave, true); removeEventListener("pointerdown", leave, true);
+      lab.animate([{ opacity: 1 }, { opacity: 0, transform: "translateX(80px)" }], { duration: 220, easing: "ease-in", fill: "both" });
+      w.style.display = "block"; body.classList.remove("booting");
+      Promise.all(panes.map((p, i) => p.animate([{ transform: "translateX(0) skewX(-14deg)" }, { transform: "translateX(130%) skewX(-14deg)" }], { duration: full ? 560 : 420, delay: (2 - i) * 60, easing: "cubic-bezier(.76,0,.24,1)", fill: "both" }).finished))
+        .then(() => { w.style.display = "none"; [...panes, lab].forEach(p => p.getAnimations().forEach(a => a.cancel())); done(); });
+    };
+    if (!full) { leave(); return; }
     this.ransomize(this.els.wipeText, "TAKE YOUR TIME"); this.els.wipeKicker.textContent = "Welcome";
     lab.animate([{ opacity: 0, transform: "scale(.9)" }, { opacity: 1, transform: "none" }], { duration: 380, easing: "cubic-bezier(.2,.8,.2,1)", fill: "both" });
-    setTimeout(() => {
-      lab.animate([{ opacity: 1 }, { opacity: 0, transform: "translateX(80px)" }], { duration: 260, easing: "ease-in", fill: "both" });
-      w.style.display = "block"; body.classList.remove("booting");
-      Promise.all(panes.map((p, i) => p.animate([{ transform: "translateX(0) skewX(-14deg)" }, { transform: "translateX(130%) skewX(-14deg)" }], { duration: 560, delay: (2 - i) * 70, easing: "cubic-bezier(.76,0,.24,1)", fill: "both" }).finished))
-        .then(() => { w.style.display = "none"; [...panes, lab].forEach(p => p.getAnimations().forEach(a => a.cancel())); done(); });
-    }, 850);
+    addEventListener("keydown", leave, true); addEventListener("pointerdown", leave, true);
+    setTimeout(leave, 900);
   },
 
   playSelect() { try { this.els.sfx.currentTime = 0; const p = this.els.sfx.play(); p && p.catch && p.catch(() => {}); } catch {} },
   setSound(on) { this.els.soundBtn.setAttribute("aria-pressed", on); },
+  setMotion(on) { this.els.motionBtn.setAttribute("aria-pressed", on); window.BGFX && window.BGFX.setPaused(!on); },
 
   toast(msg) {
     const t = this.els.toast; t.textContent = msg; t.classList.add("show");
@@ -127,13 +159,15 @@ const View = {
   /* ---------- projects ---------- */
   splitTitle(t) { const e = this.esc(t), f = e.split(" ")[0]; return `<em>${f}</em>${e.slice(f.length)}`; },
   catLabel(cats, id) { return (cats.find(c => c.id === id) || {}).label || id; },
+  paint(el, p) { el.style.setProperty("--pc", p.color); el.style.setProperty("--on", p.ink || "#000"); },
 
   cover(p, n, label) {
-    if (p.img) return `<div class="thumb"><img src="${this.esc(p.img)}" alt="" loading="lazy" onerror="this.parentNode.remove()"></div>`;
+    if (p.img) return `<div class="thumb"><img src="${this.esc(p.img)}" alt="" width="640" height="260" loading="lazy" onerror="this.parentNode.remove()"></div>`;
     return `<div class="cover" aria-hidden="true"><span class="cover-cat">${this.esc(label)}</span><span class="cover-num">${String(n).padStart(2, "0")}</span><span class="cover-word">${this.esc(p.cover || p.title.split(" ")[0])}</span></div>`;
   },
+  // ↗ marks links that leave the site in a new tab; it is the only arrow used on buttons
   links(p) {
-    return (p.links || []).map(l => `<a class="btn-mini${l.primary ? " primary" : ""}" href="${this.esc(l.url)}" target="_blank" rel="noopener">${this.esc(l.label)} ↗</a>`).join("");
+    return (p.links || []).map(l => `<a class="btn-mini${l.primary ? " primary" : ""}" href="${this.esc(l.url)}" target="_blank" rel="noopener">${this.esc(l.label)} <span class="ext" aria-hidden="true">↗</span><span class="sr-only">(opens in a new tab)</span></a>`).join("");
   },
 
   renderFilters(cats, counts, active) {
@@ -143,82 +177,114 @@ const View = {
   setFilter(id) { this.els.filters.querySelectorAll(".chip").forEach(b => b.setAttribute("aria-pressed", b.dataset.filter === id)); },
 
   renderProjects(list, cats) {
-    let n = 0;
+    let featured = 0;
     list.forEach((p, idx) => {
       const small = p.cat === "small", el = document.createElement("article");
-      el.className = "card reveal" + (p.highlights ? " clickable" : "");
-      el.dataset.cat = p.cat; el.dataset.idx = idx;
-      el.style.setProperty("--pc", p.color);
-      el.style.setProperty("--tilt", ((this.hash(p.title) % 5) - 2) * 0.4 + "deg");
-      el.style.setProperty("--i", Math.min(n++, 10));
+      el.className = "card clickable" + (!small && featured++ === 0 ? " flagship" : "");
+      el.dataset.cat = p.cat; el.dataset.idx = idx; el.id = "project-" + p.id;
+      this.paint(el, p);
+      el.style.setProperty("--tilt", el.classList.contains("flagship") ? "0deg" : ((this.hash(p.title) % 5) - 2) * 0.4 + "deg");
       el.innerHTML = `${this.cover(p, idx + 1, small ? p.tag : this.catLabel(cats, p.cat))}
         <div class="card-body">
           <div class="tags"><span class="lang">${this.esc(p.tag)}</span>${p.year ? `<span class="year">${p.year}</span>` : ""}</div>
-          <h3>${this.splitTitle(p.title)}</h3>
+          <h4 class="card-title">${this.splitTitle(p.title)}</h4>
           <p>${this.esc(p.desc)}</p>
-          ${p.stack && !small ? `<ul class="stack">${p.stack.slice(0, 4).map(s => `<li>${this.esc(s)}</li>`).join("")}${p.stack.length > 4 ? `<li>+${p.stack.length - 4}</li>` : ""}</ul>` : ""}
-          <div class="actions">${p.highlights ? `<button class="btn-mini" data-open="${idx}">Details</button>` : ""}${this.links(p)}${p.links && p.links.length ? "" : '<span class="soon">Repo coming soon</span>'}</div>
+          ${p.stack && !small ? `<ul class="stack" aria-label="Built with">${p.stack.slice(0, 4).map(s => `<li>${this.esc(s)}</li>`).join("")}${p.stack.length > 4 ? `<li>+${p.stack.length - 4} more</li>` : ""}</ul>` : ""}
+          <div class="actions"><button class="btn-mini" data-open="${idx}">Details<span class="sr-only"> about ${this.esc(p.title.toLowerCase())}</span></button>${this.links(p)}${p.links && p.links.length ? "" : '<span class="soon">Repo coming soon</span>'}</div>
         </div>`;
       (small ? this.els.smallGrid : this.els.featGrid).appendChild(el);
     });
   },
 
-  // hide/show cards for a filter and replay a quick stagger on what's left
-  applyFilter(id) {
-    let k = 0;
+  // hide/show cards for a filter and play a grid stagger on what's left
+  applyFilter(id, animate) {
+    const shown = [];
     document.querySelectorAll("#feat-grid .card, #small-grid .card").forEach(c => {
       const show = id === "all" || c.dataset.cat === id;
-      c.classList.toggle("out", !show); c.classList.remove("in");
-      if (show && !this.reduced) { c.style.setProperty("--k", k++); void c.offsetWidth; c.classList.add("in"); }
+      c.classList.toggle("out", !show); if (show) shown.push(c);
     });
     ["main", "small"].forEach(g => {
       const grid = g === "main" ? this.els.featGrid : this.els.smallGrid, label = document.querySelector(`.grid-label[data-group=${g}]`);
       label.hidden = !grid.querySelector(".card:not(.out)");
     });
     this.els.featCount.textContent = this.els.featGrid.querySelectorAll(".card:not(.out)").length;
+    if (animate && this.gsap) {
+      this.gsap.fromTo(shown, { autoAlpha: 0, y: 16, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.42, ease: "back.out(1.4)", stagger: { each: 0.06, grid: "auto" }, clearProps: "transform,opacity,visibility" });
+    }
+    if (this.gsap) ScrollTrigger.refresh();
   },
 
-  skeletons() { this.els.repoGrid.innerHTML = '<div class="card sk"></div>'.repeat(3); },
+  // Cards reveal as they scroll into view inside the projects screen (GSAP ScrollTrigger batch).
+  revealCards(cards) {
+    const g = this.gsap; if (!g || !cards.length) return;
+    g.set(cards, { autoAlpha: 0, y: 28 });
+    ScrollTrigger.batch(cards, {
+      scroller: this.els.screens.projects, start: "top 94%", once: true,
+      onEnter: batch => g.to(batch, { autoAlpha: 1, y: 0, duration: 0.55, ease: "power3.out", stagger: 0.09, overwrite: true, clearProps: "transform,opacity,visibility" }),
+    });
+    ScrollTrigger.refresh();
+  },
+
+  flashCard(idx) {
+    const c = document.querySelector(`.card[data-idx="${idx}"]`); if (!c) return;
+    c.scrollIntoView({ block: "center", behavior: this.reduced ? "auto" : "smooth" });
+    c.classList.remove("flash"); void c.offsetWidth; c.classList.add("flash");
+  },
+
+  repoLoading() {
+    this.els.repoStatus.textContent = "Loading repositories from GitHub…";
+    this.els.repoGrid.innerHTML = '<div class="card sk" aria-hidden="true"></div>'.repeat(3);
+  },
+
+  repoError() {
+    this.els.repoGrid.innerHTML = "";
+    this.els.repoStatus.innerHTML = `<span>GitHub didn't answer (it may be rate-limiting this network). Everything above is still here.</span><button class="btn-mini" data-retry>Try again</button>`;
+  },
 
   ago(iso) {
     const d = (Date.now() - new Date(iso)) / 864e5;
     return d < 1 ? "today" : d < 2 ? "yesterday" : d < 30 ? `${Math.floor(d)} days ago` : d < 365 ? `${Math.floor(d / 30)} mo ago` : `${Math.floor(d / 365)} yr ago`;
   },
 
-  renderRepos(repos, status, model) {
-    this.els.repoStatus.textContent = status;
+  renderRepos(repos, model) {
+    this.els.repoStatus.textContent = repos.length
+      ? `${repos.length} more public ${repos.length === 1 ? "repository" : "repositories"}, live from GitHub.`
+      : "Every public repository is already featured above. New ones will show up here automatically.";
     this.els.repoGrid.innerHTML = "";
-    repos.forEach((r, i) => {
+    const cards = repos.map((r, i) => {
       const el = document.createElement("article"), color = model.langColors[r.language] || "#e60012";
-      el.className = "card reveal in"; el.style.setProperty("--pc", color); el.style.setProperty("--k", i);
+      el.className = "card"; el.style.setProperty("--pc", color);
       el.style.setProperty("--tilt", ((this.hash(r.name) % 5) - 2) * 0.4 + "deg");
       const pretty = r.name.replace(/[-_]/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/\b\w/g, c => c.toUpperCase());
       el.innerHTML = `${this.cover({ title: pretty.toUpperCase() }, i + 1, r.language || "Repo")}
         <div class="card-body">
           <div class="tags"><span class="lang">${this.esc(r.language || "Repo")}</span></div>
-          <h3>${this.splitTitle(pretty)}</h3>
-          <p>${this.esc(r.description || "No description yet, but the code speaks for itself.")}</p>
-          <div class="actions"><span class="repo-meta"><span>★ ${r.stargazers_count || 0}</span><span>${r.pushed_at ? "Updated " + this.ago(r.pushed_at) : ""}</span></span>
-          ${r.homepage ? `<a class="btn-mini" href="${this.esc(r.homepage)}" target="_blank" rel="noopener">Live ↗</a>` : ""}
-          <a class="btn-mini primary" href="${this.esc(r.html_url)}" target="_blank" rel="noopener">Code ↗</a></div>
+          <h4 class="card-title">${this.splitTitle(pretty)}</h4>
+          <p>${this.esc(r.description || "No description on GitHub yet.")}</p>
+          <div class="actions"><span class="repo-meta"><span>★ ${r.stargazers_count || 0}<span class="sr-only"> stars</span></span><span>${r.pushed_at ? "Updated " + this.ago(r.pushed_at) : ""}</span></span>
+          ${r.homepage ? `<a class="btn-mini" href="${this.esc(r.homepage)}" target="_blank" rel="noopener">Live <span class="ext" aria-hidden="true">↗</span><span class="sr-only">(opens in a new tab)</span></a>` : ""}
+          <a class="btn-mini primary" href="${this.esc(r.html_url)}" target="_blank" rel="noopener">Code <span class="ext" aria-hidden="true">↗</span><span class="sr-only">(opens in a new tab)</span></a></div>
         </div>`;
       this.els.repoGrid.appendChild(el);
+      return el;
     });
+    this.revealCards(cards);
   },
 
   /* ---------- project modal ---------- */
-  renderModal(p, idx, total, cats, swap) {
+  renderModal(p, idx, pos, total, cats, swap) {
     const b = this.els.modalBody;
-    this.els.modalPanel.style.setProperty("--pc", p.color);
-    b.innerHTML = `${this.cover(p, idx + 1, this.catLabel(cats, p.cat)).replace('class="cover"', 'class="cover m-cover"')}
+    this.paint(this.els.modalPanel, p);
+    const label = p.cat === "small" ? p.tag : this.catLabel(cats, p.cat);
+    b.innerHTML = `${this.cover(p, idx + 1, label).replace('class="cover"', 'class="cover m-cover"')}
       <div class="m-body${swap ? " swap" : ""}">
         <div class="tags"><span class="lang">${this.esc(p.tag)}</span>${p.year ? `<span class="year">${p.year}</span>` : ""}</div>
         <h2 id="m-title">${this.splitTitle(p.title)}</h2>
         <p class="m-lead">${this.esc(p.desc)}</p>
-        ${p.highlights ? `<h4>Highlights</h4><ul class="hl-list">${p.highlights.map(h => `<li>${this.esc(h)}</li>`).join("")}</ul>` : ""}
-        ${p.stack ? `<h4>Built with</h4><ul class="stack">${p.stack.map(s => `<li>${this.esc(s)}</li>`).join("")}</ul>` : ""}
-        <div class="actions">${this.links(p)}</div>
-        <div class="m-nav"><button class="btn-mini" data-step="-1">← Prev</button><span>${idx + 1} / ${total}</span><button class="btn-mini" data-step="1">Next →</button></div>
+        ${p.highlights ? `<h3>Highlights</h3><ol class="hl-list">${p.highlights.map(h => `<li>${this.esc(h)}</li>`).join("")}</ol>` : ""}
+        ${p.stack ? `<h3>Built with</h3><ul class="stack">${p.stack.map(s => `<li>${this.esc(s)}</li>`).join("")}</ul>` : ""}
+        <div class="actions">${this.links(p) || '<span class="soon">Repo coming soon</span>'}</div>
+        <div class="m-nav"><button class="btn-mini" data-step="-1">← Previous</button><span>${pos + 1} / ${total}</span><button class="btn-mini" data-step="1">Next →</button></div>
       </div>`;
     b.querySelectorAll(".m-body > *").forEach((e, i) => e.style.setProperty("--i", i));
     b.scrollTop = 0;
@@ -233,60 +299,125 @@ const View = {
     setTimeout(() => { if (!el.classList.contains("open")) el.hidden = true; }, this.reduced ? 0 : 450);
   },
 
-  /* ---------- skills ---------- */
-  renderSkills(groups) {
-    groups.forEach(g => {
-      const d = document.createElement("div");
-      d.className = "skill-group reveal";
-      d.innerHTML = `<h3>${this.esc(g.group)}</h3>` + g.items.map(([n, v]) =>
-        `<div class="skill-row"><span>${this.esc(n)}</span><div class="skill-bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v}" aria-label="${this.esc(n)}"><div class="fill" data-v="${v}"></div></div><span class="lv">0</span></div>`).join("");
-      this.els.skillsBody.appendChild(d);
-    });
+  /* ---------- quick jump palette ---------- */
+  renderPalette(items, sel) {
+    const L = this.els.paletteList;
+    if (!items.length) { L.innerHTML = '<li class="none" role="option" aria-disabled="true">Nothing matches. Try a project name, "cv" or "sound".</li>'; this.els.paletteInput.removeAttribute("aria-activedescendant"); return; }
+    L.innerHTML = items.map((it, i) => `<li id="pal-${i}" role="option" data-i="${i}" aria-selected="${i === sel}" style="--pc:${it.color || "var(--red)"}"><i aria-hidden="true"></i>${this.esc(it.label)}<small>${this.esc(it.kind)}</small></li>`).join("");
+    this.els.paletteInput.setAttribute("aria-activedescendant", "pal-" + sel);
+    L.querySelector(`[data-i="${sel}"]`)?.scrollIntoView({ block: "nearest" });
   },
 
-  animateSkillBars() {
-    this.els.skillsBody.querySelectorAll(".skill-row").forEach((r, i) => {
-      const f = r.querySelector(".fill"), lv = r.querySelector(".lv"), v = +f.dataset.v;
-      if (this.reduced) { f.style.width = v + "%"; lv.textContent = v; return; }
-      f.style.transition = "none"; f.style.width = "0"; lv.textContent = "0"; void f.offsetWidth; f.style.transition = "";
-      setTimeout(() => { f.style.width = v + "%"; this.count(lv, v, 1000); }, 600 + i * 55);
+  /* ---------- skills: hexagon chart + ranked list + detail ---------- */
+  nice: t => t.toLowerCase().replace(/(^|[\s-])\S/g, c => c.toUpperCase()),
+  pips: (r, label) => `<span class="pips" role="img" aria-label="Rank ${r} of 5">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= r ? "f" : ""}"></i>`).join("")}</span>`,
+  skR: [0, 0, 0, 0, 0, 0],
+
+  renderSkillTabs(groups) {
+    document.getElementById("sk-groups").innerHTML = groups.map((g, i) =>
+      `<button class="sk-tab" role="tab" id="sk-tab-${i}" aria-controls="sk-panel" aria-selected="false" tabindex="-1" data-group="${i}"><small>0${i + 1}</small>${this.esc(g.group)}</button>`).join("");
+  },
+
+  // point i of the hexagon at radius r (0..100); first axis points straight up
+  hexPt(i, r, n = 6) { const a = (i / n) * Math.PI * 2 - Math.PI / 2; return [Math.cos(a) * r, Math.sin(a) * r]; },
+
+  drawRadarFrame(items) {
+    const svg = document.getElementById("sk-radar"), n = items.length;
+    const ring = r => Array.from({ length: n }, (_, i) => this.hexPt(i, r, n).map(v => v.toFixed(1)).join(",")).join(" ");
+    let h = `<title id="sk-radar-title"></title>`;
+    [25, 50, 75].forEach(r => (h += `<polygon class="ring" points="${ring(r)}"/>`));
+    h += `<polygon class="ring outer" points="${ring(100)}"/>`;
+    for (let i = 0; i < n; i++) { const [x, y] = this.hexPt(i, 100, n); h += `<line class="axis" x1="0" y1="0" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }
+    h += `<polygon class="shape" id="sk-shape" points="${ring(0)}"/>`;
+    items.forEach((it, i) => {
+      const [x, y] = this.hexPt(i, 116, n), anchor = Math.abs(x) < 5 ? "middle" : x > 0 ? "start" : "end";
+      h += `<circle class="dot" data-si="${i}" r="5" cx="0" cy="0"/><text data-si="${i}" x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="${anchor}">${this.esc(it.short)}</text>`;
     });
+    svg.innerHTML = h;
+    svg.querySelector("title").textContent = items.map(it => `${it.name} ${it.v}`).join(", ");
   },
-  count(el, to, ms) {
-    const t0 = performance.now();
-    const step = t => { const k = Math.min(1, (t - t0) / ms); el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); };
-    requestAnimationFrame(step);
+
+  setRadar(vals) {
+    this.skR = vals.slice();
+    const pts = vals.map((v, i) => this.hexPt(i, v));
+    document.getElementById("sk-shape")?.setAttribute("points", pts.map(p => p.map(n => n.toFixed(1)).join(",")).join(" "));
+    document.querySelectorAll("#sk-radar .dot").forEach((d, i) => { d.setAttribute("cx", pts[i][0].toFixed(1)); d.setAttribute("cy", pts[i][1].toFixed(1)); });
   },
+
+  // morph the hexagon to the new group's values (from the centre on first show)
+  morphRadar(vals, fromZero) {
+    const start = fromZero ? vals.map(() => 0) : this.skR.slice();
+    if (!this.gsap) { this.setRadar(vals); return; }
+    const o = { k: 0 };
+    this.gsap.killTweensOf(this.skTween || {});
+    this.skTween = o;
+    this.gsap.to(o, { k: 1, duration: fromZero ? 0.9 : 0.55, delay: fromZero ? 0.35 : 0, ease: fromZero ? "back.out(1.3)" : "power3.out",
+      onUpdate: () => this.setRadar(start.map((s0, i) => s0 + (vals[i] - s0) * o.k)) });
+  },
+
+  showSkillGroup(groups, gi, si, opts = {}) {
+    const g = groups[gi];
+    document.querySelectorAll(".sk-tab").forEach((t, i) => { t.setAttribute("aria-selected", i === gi); t.tabIndex = i === gi ? 0 : -1; });
+    document.getElementById("sk-panel").setAttribute("aria-labelledby", "sk-tab-" + gi);
+    document.querySelector(".sk-chart").dataset.blurb = g.blurb;
+    this.drawRadarFrame(g.items);
+    document.getElementById("sk-list").innerHTML = g.items.map((it, i) => {
+      const r = this.rankOf(it.v);
+      return `<li><button class="sk-item" data-si="${i}" aria-pressed="false">${this.pips(r)}<span class="sk-name">${this.esc(it.name)}</span><span class="sk-bar" aria-hidden="true"><i style="--v:${it.v}%"></i></span><span class="sk-v"><span class="sr-only">level </span>${it.v}</span></button></li>`;
+    }).join("");
+    this.morphRadar(g.items.map(it => it.v), opts.fromZero);
+    if (this.gsap) this.gsap.fromTo("#sk-list .sk-item", { autoAlpha: 0, x: 30 }, { autoAlpha: 1, x: 0, duration: 0.4, ease: "power3.out", stagger: 0.045, delay: opts.fromZero ? 0.3 : 0, clearProps: "transform,opacity,visibility" });
+    if (this.gsap) this.gsap.fromTo("#sk-list .sk-bar i", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: "power3.out", stagger: 0.045, delay: opts.fromZero ? 0.4 : 0.1 });
+    this.showSkill(g, si);
+  },
+
+  showSkill(g, si) {
+    const it = g.items[si], r = this.rankOf(it.v), P = this.skProjects;
+    document.querySelectorAll(".sk-item").forEach((b, i) => b.setAttribute("aria-pressed", i === si));
+    document.querySelectorAll("#sk-radar [data-si]").forEach(el => el.classList.toggle("on", +el.dataset.si === si));
+    const used = it.uses.map(id => P[id]).filter(Boolean);
+    document.getElementById("sk-detail").innerHTML = `<h3>${this.esc(it.name)}</h3>
+      <div class="sk-meta">${this.pips(r)}<span>Rank ${r}</span><span>${it.v} / 100</span></div>
+      ${used.length ? `<div class="sk-used"><span>Used in</span>${used.map(u => `<button data-project="${u.i}" style="--pc:${u.p.color}" class="${u.p.ink ? "" : "dark"}">${this.esc(this.nice(u.p.title))}</button>`).join("")}</div>`
+        : `<p class="sk-none">Not tied to a project on this site yet.</p>`}`;
+  },
+
+  rankOf: v => (v >= 80 ? 5 : v >= 70 ? 4 : v >= 60 ? 3 : v >= 50 ? 2 : 1),
 
   /* ---------- about ---------- */
-  renderAbout(items) {
-    let html = `<figure class="about-photo"><img src="assets/me.jpg" alt="Profile photo" onerror="this.closest('figure').remove()"><figcaption>CLOUD ENGINEERING / IT</figcaption></figure>`;
-    items.forEach((it, i) => {
-      html += typeof it === "string"
-        ? `<p class="sr${i === 0 ? " lead" : ""}">${this.md(it)}</p>`
-        : `<p class="about-quote sr">“${it.quote}”<small>— ${it.by}</small></p>`;
+  renderAbout(chapters) {
+    let first = true;
+    let html = `<figure class="about-photo"><img src="assets/pfp.jpg" width="640" height="722" alt="Black-and-white manga-style illustration used as a profile picture" loading="lazy"><figcaption>PFP</figcaption></figure>`;
+    chapters.forEach(ch => {
+      html += `<section class="chapter"><h3>${this.esc(ch.h)}</h3>`;
+      ch.items.forEach(it => {
+        html += typeof it === "string"
+          ? `<p class="sr${first ? " lead" : ""}">${this.md(it)}</p>`
+          : `<blockquote class="about-quote sr"><p>${this.esc(it.quote)}</p><small>${this.esc(it.by)}</small></blockquote>`;
+        first = false;
+      });
+      html += "</section>";
     });
     this.els.aboutBody.innerHTML = html;
   },
 
   /* ---------- ambient: clock, parallax, cursor, card tilt ---------- */
   startClock() {
-    const tick = () => (this.els.clock.textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
-    tick(); setInterval(tick, 10000);
+    const tick = () => { const d = new Date(); this.els.clock.textContent = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); this.renderCalendar(d); };
+    tick(); setInterval(tick, 15000);
   },
 
   startParallax() {
     if (this.reduced) return;
     const st = document.getElementById("bg-stripes"), ht = document.getElementById("bg-halftone");
-    let tx = 0, ty = 0, cx = 0, cy = 0;
-    addEventListener("mousemove", e => { tx = e.clientX / innerWidth - 0.5; ty = e.clientY / innerHeight - 0.5; }, { passive: true });
+    let tx = 0, ty = 0, cx = 0, cy = 0, raf = 0;
     const loop = () => {
       cx += (tx - cx) * 0.06; cy += (ty - cy) * 0.06;
       st.style.transform = `translate3d(${cx * 22}px,${cy * 14}px,0)`;
       ht.style.transform = `translate3d(${cx * -34}px,${cy * -22}px,0)`;
-      requestAnimationFrame(loop);
+      raf = Math.abs(tx - cx) + Math.abs(ty - cy) > 0.001 ? requestAnimationFrame(loop) : 0;   // idle when the pointer stops
     };
-    loop();
+    addEventListener("mousemove", e => { tx = e.clientX / innerWidth - 0.5; ty = e.clientY / innerHeight - 0.5; if (!raf) raf = requestAnimationFrame(loop); }, { passive: true });
   },
 
   // 30-frame sprite cursor that eases after the pointer
@@ -298,13 +429,15 @@ const View = {
     addEventListener("mousemove", e => {
       x = e.clientX; y = e.clientY;
       if (!vis) { px = x; py = y; cur.style.display = "block"; vis = true; }
-      cur.classList.toggle("link", !!e.target.closest?.("a,button,.card.clickable,.menu-item,#big-name,input,textarea,[data-close]"));
+      cur.classList.toggle("link", !!e.target.closest?.("a,button,.card.clickable,.menu-item,input,textarea,[data-close],#palette-list li"));
     }, { passive: true });
     document.documentElement.addEventListener("mouseleave", () => { cur.style.display = "none"; vis = false; });
     const tick = ts => {
-      if (ts - last >= 50) { frame = (frame + 1) % 30; last = ts; cur.style.backgroundPosition = -frame * 48 + "px 0"; }
-      px += (x - px) * 0.4; py += (y - py) * 0.4;
-      cur.style.transform = `translate3d(${px - 6}px,${py - 4}px,0)`;
+      if (vis) {
+        if (ts - last >= 50) { frame = (frame + 1) % 30; last = ts; cur.style.backgroundPosition = -frame * 48 + "px 0"; }
+        px += (x - px) * 0.4; py += (y - py) * 0.4;
+        cur.style.transform = `translate3d(${px - 6}px,${py - 4}px,0)`;
+      }
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
@@ -314,7 +447,7 @@ const View = {
     if (this.reduced || !matchMedia("(pointer:fine)").matches) return;
     const grid = this.els.screens.projects;
     grid.addEventListener("pointermove", e => {
-      const c = e.target.closest(".card"); if (!c) return;
+      const c = e.target.closest(".card"); if (!c || c.classList.contains("flagship")) return;
       const r = c.getBoundingClientRect();
       c.style.setProperty("--ry", ((e.clientX - r.left) / r.width - 0.5) * 7 + "deg");
       c.style.setProperty("--rx", -((e.clientY - r.top) / r.height - 0.5) * 7 + "deg");

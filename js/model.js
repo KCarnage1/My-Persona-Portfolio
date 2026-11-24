@@ -3,7 +3,7 @@ const Model = {
   githubUser: "KCarnage1",
   contactEmail: "rajesholbis@gmail.com",   // contact form target (formsubmit.co relay)
 
-  state: { skillGroup: 0, skill: 0, screen: "home", menuIndex: 0, reposLoaded: false, skillsBuilt: false, aboutBuilt: false, projectsBuilt: false, filter: "all", modal: -1, motion: true },
+  state: { project: 0, skillGroup: 0, skill: 0, screen: "home", menuIndex: 0, reposLoaded: false, skillsBuilt: false, aboutBuilt: false, projectsBuilt: false, filter: "all", modal: -1, motion: true },
   screens: ["home", "projects", "skills", "about", "contact"],
   sections: ["projects", "skills", "about", "contact"],
   captions: {

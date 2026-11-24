@@ -5,6 +5,7 @@ const Controller = {
   sound: true,
   lastFocus: null,
   pal: { items: [], sel: 0, from: null },
+  narrow: matchMedia("(max-width: 899px)"),
 
   init() {
     View.init();
@@ -71,11 +72,11 @@ const Controller = {
     if (!Model.state.projectsBuilt) {
       const counts = Model.projects.reduce((o, p) => (o[p.cat] = (o[p.cat] || 0) + 1, o), { all: Model.projects.length });
       View.renderFilters(Model.categories, counts, Model.state.filter);
-      View.renderProjects(Model.projects, Model.categories);
+      View.renderProjectList(Model.projects);
       View.applyFilter(Model.state.filter);
-      View.revealCards([...document.querySelectorAll("#feat-grid .card, #small-grid .card")]);
       Model.state.projectsBuilt = true;
     }
+    View.showProjectDetail(Model.projects[Model.state.project], Model.state.project, Model.categories, true);
     if (!Model.state.reposLoaded) this.loadRepos();
   },
 
@@ -91,14 +92,34 @@ const Controller = {
     View.els.filters.addEventListener("click", e => {
       const b = e.target.closest("[data-filter]"); if (!b || b.dataset.filter === Model.state.filter) return;
       Model.state.filter = b.dataset.filter; this.play();
-      View.setFilter(Model.state.filter); View.applyFilter(Model.state.filter, true);
+      View.setFilter(Model.state.filter);
+      const shown = View.applyFilter(Model.state.filter, true);
+      if (shown.length && !shown.includes(Model.state.project)) this.selectProject(shown[0], false);
     });
-    [View.els.featGrid, View.els.smallGrid].forEach(g => g.addEventListener("click", e => {
-      if (e.target.closest("a")) return;                                   // real links just work
-      const c = e.target.closest(".card.clickable"); if (!c) return;
-      this.openModal(+c.dataset.idx, e.target.closest("button") || c.querySelector("[data-open]"));
-    }));
+    const list = document.getElementById("pj-list");
+    list.addEventListener("click", e => {
+      const b = e.target.closest(".pj-item"); if (!b) return;
+      const idx = +b.dataset.idx;
+      // phones have no room for the side panel, so the same details open full-screen
+      if (this.narrow.matches) this.openModal(idx, b); else this.selectProject(idx);
+    });
+    list.addEventListener("pointerover", e => {
+      const b = e.target.closest(".pj-item"); if (b && e.pointerType === "mouse" && !this.narrow.matches) this.selectProject(+b.dataset.idx);
+    });
+    list.addEventListener("keydown", e => {
+      if (!e.target.closest(".pj-item") || (e.key !== "ArrowDown" && e.key !== "ArrowUp")) return;
+      e.preventDefault();
+      const items = [...list.querySelectorAll("li:not([hidden]) .pj-item")], i = items.indexOf(e.target);
+      const next = items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length];
+      next.focus(); if (!this.narrow.matches) this.selectProject(+next.dataset.idx);
+    });
     View.els.repoStatus.addEventListener("click", e => { if (e.target.closest("[data-retry]")) { this.play(); this.loadRepos(); } });
+  },
+
+  selectProject(idx, sound = true) {
+    if (idx === Model.state.project) return;
+    Model.state.project = idx; if (sound) this.play();
+    View.showProjectDetail(Model.projects[idx], idx, Model.categories, true);
   },
 
   openModal(idx, from) {
@@ -125,8 +146,9 @@ const Controller = {
       if (Model.state.filter !== "all" && Model.state.filter !== p.cat) {
         Model.state.filter = "all"; View.setFilter("all"); View.applyFilter("all");
       }
-      View.flashCard(idx);
-      this.openModal(idx, document.querySelector(`.card[data-idx="${idx}"] [data-open]`));
+      const b = document.querySelector(`.pj-item[data-idx="${idx}"]`);
+      if (this.narrow.matches) this.openModal(idx, b);
+      else { this.selectProject(idx); b.focus({ preventScroll: true }); View.els.screens.projects.scrollTop = 0; }
     });
   },
 

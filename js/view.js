@@ -10,8 +10,8 @@ const View = {
     const $ = s => document.querySelector(s);
     Object.assign(this.els, {
       wipe: $("#wipe"), wipeText: $("#wipe-text"), wipeKicker: $("#wipe-kicker"),
-      featGrid: $("#feat-grid"), smallGrid: $("#small-grid"), repoGrid: $("#repo-grid"), repoStatus: $("#repo-status"),
-      filters: $("#filters"), featCount: $("#feat-count"),
+      repoGrid: $("#repo-grid"), repoStatus: $("#repo-status"),
+      filters: $("#filters"),
       skillsBody: $("#skills-body"), aboutBody: $("#about-body"), sfx: $("#sfx-select"),
       cursor: $("#cursor"), clock: $("#clock"), caption: $("#menu-caption span"),
       progress: $("#progress"), toTop: $("#to-top"), toast: $("#toast"),
@@ -176,45 +176,62 @@ const View = {
   },
   setFilter(id) { this.els.filters.querySelectorAll(".chip").forEach(b => b.setAttribute("aria-pressed", b.dataset.filter === id)); },
 
-  renderProjects(list, cats) {
-    let featured = 0;
-    list.forEach((p, idx) => {
-      const small = p.cat === "small", el = document.createElement("article");
-      el.className = "card clickable" + (!small && featured++ === 0 ? " flagship" : "");
-      el.dataset.cat = p.cat; el.dataset.idx = idx; el.id = "project-" + p.id;
-      this.paint(el, p);
-      el.style.setProperty("--tilt", el.classList.contains("flagship") ? "0deg" : ((this.hash(p.title) % 5) - 2) * 0.4 + "deg");
-      el.innerHTML = `${this.cover(p, idx + 1, small ? p.tag : this.catLabel(cats, p.cat))}
-        <div class="card-body">
-          <div class="tags"><span class="lang">${this.esc(p.tag)}</span>${p.year ? `<span class="year">${p.year}</span>` : ""}</div>
-          <h4 class="card-title">${this.splitTitle(p.title)}</h4>
-          <p>${this.esc(p.desc)}</p>
-          ${p.stack && !small ? `<ul class="stack" aria-label="Built with">${p.stack.slice(0, 4).map(s => `<li>${this.esc(s)}</li>`).join("")}${p.stack.length > 4 ? `<li>+${p.stack.length - 4} more</li>` : ""}</ul>` : ""}
-          <div class="actions"><button class="btn-mini" data-open="${idx}">Details<span class="sr-only"> about ${this.esc(p.title.toLowerCase())}</span></button>${this.links(p)}${p.links && p.links.length ? "" : '<span class="soon">Repo coming soon</span>'}</div>
-        </div>`;
-      (small ? this.els.smallGrid : this.els.featGrid).appendChild(el);
-    });
+  // what a visitor can do with the project right now, read from its links
+  status(p) {
+    const l = (p.links || []).map(x => x.label.toLowerCase());
+    return l.some(x => x.includes("live")) ? ["Live", "live"] : l.some(x => x.includes("download")) ? ["Download", "dl"]
+      : l.length ? ["Source", "src"] : ["Soon", "soon"];
   },
 
-  // hide/show cards for a filter and play a grid stagger on what's left
+  // Persona-style select screen: numbered list on the left, the selected project in a large panel on the right.
+  renderProjectList(list) {
+    const row = (p, idx) => {
+      const [st, cls] = this.status(p);
+      return `<li><button class="pj-item" data-idx="${idx}" data-cat="${p.cat}" aria-pressed="false" aria-controls="pj-detail" style="--pc:${p.color}">
+        <span class="pj-num">${String(idx + 1).padStart(2, "0")}</span>
+        <span class="pj-text"><span class="pj-title">${this.esc(this.nice(p.title))}</span><span class="pj-tag">${this.esc(p.tag)}</span></span>
+        <span class="pj-st ${cls}">${st}</span></button></li>`;
+    };
+    const main = list.map((p, i) => [p, i]).filter(([p]) => p.cat !== "small"), small = list.map((p, i) => [p, i]).filter(([p]) => p.cat === "small");
+    document.getElementById("pj-list").innerHTML =
+      `<h3 class="pj-group" data-group="main">Featured <span class="count" id="feat-count">${main.length}</span></h3><ul>${main.map(([p, i]) => row(p, i)).join("")}</ul>` +
+      `<h3 class="pj-group" data-group="small">Smaller builds</h3><ul>${small.map(([p, i]) => row(p, i)).join("")}</ul>`;
+  },
+
+  showProjectDetail(p, idx, cats, animate) {
+    document.querySelectorAll(".pj-item").forEach(b => b.setAttribute("aria-pressed", +b.dataset.idx === idx));
+    const d = document.getElementById("pj-detail"), [st, cls] = this.status(p);
+    this.paint(d, p);
+    d.innerHTML = `${this.cover(p, idx + 1, p.cat === "small" ? p.tag : this.catLabel(cats, p.cat))}
+      <div class="pj-body">
+        <div class="tags"><span class="lang">${this.esc(p.tag)}</span>${p.year ? `<span class="year">${p.year}</span>` : ""}<span class="pj-st ${cls}">${st}</span></div>
+        <h3 class="pj-h">${this.splitTitle(p.title)}</h3>
+        <p class="m-lead">${this.esc(p.desc)}</p>
+        ${p.highlights ? `<h4>Highlights</h4><ol class="hl-list">${p.highlights.map(h => `<li>${this.esc(h)}</li>`).join("")}</ol>` : ""}
+        ${p.stack ? `<h4>Built with</h4><ul class="stack">${p.stack.map(x => `<li>${this.esc(x)}</li>`).join("")}</ul>` : ""}
+        <div class="actions">${this.links(p) || '<span class="soon">Repo coming soon</span>'}</div>
+      </div>`;
+    if (animate && this.gsap) {
+      this.gsap.fromTo(d.querySelector(".cover"), { clipPath: "polygon(0 0,0 0,0 100%,0 100%)" }, { clipPath: "polygon(0 0,100% 0,100% 100%,0 100%)", duration: 0.45, ease: "power3.out", clearProps: "clipPath" });
+      this.gsap.fromTo(d.querySelectorAll(".pj-body > *"), { autoAlpha: 0, x: 24 }, { autoAlpha: 1, x: 0, duration: 0.35, ease: "power3.out", stagger: 0.035, clearProps: "transform,opacity,visibility" });
+    }
+  },
+
   applyFilter(id, animate) {
     const shown = [];
-    document.querySelectorAll("#feat-grid .card, #small-grid .card").forEach(c => {
-      const show = id === "all" || c.dataset.cat === id;
-      c.classList.toggle("out", !show); if (show) shown.push(c);
+    document.querySelectorAll(".pj-item").forEach(b => {
+      const show = id === "all" || b.dataset.cat === id;
+      b.parentNode.hidden = !show; if (show) shown.push(b);
     });
-    ["main", "small"].forEach(g => {
-      const grid = g === "main" ? this.els.featGrid : this.els.smallGrid, label = document.querySelector(`.grid-label[data-group=${g}]`);
-      label.hidden = !grid.querySelector(".card:not(.out)");
+    document.querySelectorAll(".pj-group").forEach(h => {
+      const ul = h.nextElementSibling; h.hidden = ul.hidden = !ul.querySelector("li:not([hidden])");
     });
-    this.els.featCount.textContent = this.els.featGrid.querySelectorAll(".card:not(.out)").length;
-    if (animate && this.gsap) {
-      this.gsap.fromTo(shown, { autoAlpha: 0, y: 16, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.42, ease: "back.out(1.4)", stagger: { each: 0.06, grid: "auto" }, clearProps: "transform,opacity,visibility" });
-    }
-    if (this.gsap) ScrollTrigger.refresh();
+    const fc = document.getElementById("feat-count"); if (fc) fc.textContent = document.querySelectorAll('.pj-group[data-group=main] + ul li:not([hidden])').length;
+    if (animate && this.gsap) this.gsap.fromTo(shown, { autoAlpha: 0, x: -24 }, { autoAlpha: 1, x: 0, duration: 0.35, ease: "power3.out", stagger: 0.04, clearProps: "transform,opacity,visibility" });
+    return shown.map(b => +b.dataset.idx);
   },
 
-  // Cards reveal as they scroll into view inside the projects screen (GSAP ScrollTrigger batch).
+  // Repo cards reveal as they scroll into view inside the projects screen (GSAP ScrollTrigger batch).
   revealCards(cards) {
     const g = this.gsap; if (!g || !cards.length) return;
     g.set(cards, { autoAlpha: 0, y: 28 });
@@ -223,12 +240,6 @@ const View = {
       onEnter: batch => g.to(batch, { autoAlpha: 1, y: 0, duration: 0.55, ease: "power3.out", stagger: 0.09, overwrite: true, clearProps: "transform,opacity,visibility" }),
     });
     ScrollTrigger.refresh();
-  },
-
-  flashCard(idx) {
-    const c = document.querySelector(`.card[data-idx="${idx}"]`); if (!c) return;
-    c.scrollIntoView({ block: "center", behavior: this.reduced ? "auto" : "smooth" });
-    c.classList.remove("flash"); void c.offsetWidth; c.classList.add("flash");
   },
 
   repoLoading() {

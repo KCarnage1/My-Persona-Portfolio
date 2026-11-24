@@ -79,10 +79,10 @@
     <section class="screen sub" id="screen-projects" aria-labelledby="h-projects">
       <h2 class="screen-head" id="h-projects"><span class="ransom" data-ransom="PROJECTS"></span></h2>
       <div class="filters reveal" role="group" aria-label="Filter projects" id="filters"></div>
-      <h3 class="grid-label reveal" data-group="main"><span class="bar" aria-hidden="true"></span>Featured<span class="count" id="feat-count"></span></h3>
-      <div id="feat-grid" class="grid"></div>
-      <h3 class="grid-label reveal" data-group="small"><span class="bar" aria-hidden="true"></span>Smaller builds</h3>
-      <div id="small-grid" class="grid grid-small"></div>
+      <div class="pj-layout">
+        <nav class="pj-list reveal" id="pj-list" aria-label="Project list"></nav>
+        <article class="pj-detail" id="pj-detail" aria-live="polite"></article>
+      </div>
       <h3 class="grid-label reveal"><span class="bar" aria-hidden="true"></span>More on GitHub</h3>
       <div id="repo-status" aria-live="polite"></div>
       <div id="repo-grid" class="grid grid-small"></div>

@@ -165,6 +165,23 @@ const View = {
     if (p.img) return `<div class="thumb"><img src="${this.esc(p.img)}" alt="" width="640" height="260" loading="lazy" onerror="this.parentNode.remove()"></div>`;
     return `<div class="cover" aria-hidden="true"><span class="cover-cat">${this.esc(label)}</span><span class="cover-num">${String(n).padStart(2, "0")}</span><span class="cover-word">${this.esc(p.cover || p.title.split(" ")[0])}</span></div>`;
   },
+  // real screenshots when the project has them (first one large, the rest as thumbnails); otherwise the drawn cover
+  media(p, n, label) {
+    if (!p.shots || !p.shots.length) return this.cover(p, n, label);
+    const [first] = p.shots;
+    return `<div class="gallery"><figure class="shot"><img src="${this.esc(first.src)}" alt="${this.esc(first.alt)}" width="1280" height="720" decoding="async">
+      <span class="cover-cat">${this.esc(label)}</span><figcaption>${this.esc(first.alt)}</figcaption></figure>
+      ${p.shots.length > 1 ? `<div class="thumbs" role="group" aria-label="Screenshots">${p.shots.map((sh, i) => `<button class="thumb-btn" data-shot="${i}" aria-pressed="${i === 0}"><img src="${this.esc(sh.src)}" alt="" width="1280" height="720" loading="lazy" decoding="async"><span class="sr-only">Show screenshot ${i + 1}: ${this.esc(sh.alt)}</span></button>`).join("")}</div>` : ""}</div>`;
+  },
+  showShot(btn, p) {
+    const g = btn.closest(".gallery"), sh = p.shots[+btn.dataset.shot], img = g.querySelector(".shot img");
+    g.querySelectorAll(".thumb-btn").forEach(b => b.setAttribute("aria-pressed", b === btn));
+    g.querySelector("figcaption").textContent = sh.alt;
+    const swap = () => { img.src = sh.src; img.alt = sh.alt; };
+    if (this.gsap) this.gsap.timeline().to(img, { autoAlpha: 0, x: -20, duration: 0.15, onComplete: swap }).fromTo(img, { x: 30 }, { autoAlpha: 1, x: 0, duration: 0.3, ease: "power3.out", clearProps: "transform,opacity,visibility" });
+    else swap();
+  },
+
   // ↗ marks links that leave the site in a new tab; it is the only arrow used on buttons
   links(p) {
     return (p.links || []).map(l => `<a class="btn-mini${l.primary ? " primary" : ""}" href="${this.esc(l.url)}" target="_blank" rel="noopener">${this.esc(l.label)} <span class="ext" aria-hidden="true">↗</span><span class="sr-only">(opens in a new tab)</span></a>`).join("");
@@ -189,6 +206,7 @@ const View = {
       const [st, cls] = this.status(p);
       return `<li><button class="pj-item" data-idx="${idx}" data-cat="${p.cat}" aria-pressed="false" aria-controls="pj-detail" style="--pc:${p.color}">
         <span class="pj-num">${String(idx + 1).padStart(2, "0")}</span>
+        <span class="pj-mini" aria-hidden="true">${p.shots ? `<img src="${this.esc(p.shots[0].src)}" alt="" width="1280" height="720" loading="lazy" decoding="async">` : ""}</span>
         <span class="pj-text"><span class="pj-title">${this.esc(this.nice(p.title))}</span><span class="pj-tag">${this.esc(p.tag)}</span></span>
         <span class="pj-st ${cls}">${st}</span></button></li>`;
     };
@@ -202,7 +220,7 @@ const View = {
     document.querySelectorAll(".pj-item").forEach(b => b.setAttribute("aria-pressed", +b.dataset.idx === idx));
     const d = document.getElementById("pj-detail"), [st, cls] = this.status(p);
     this.paint(d, p);
-    d.innerHTML = `${this.cover(p, idx + 1, p.cat === "small" ? p.tag : this.catLabel(cats, p.cat))}
+    d.innerHTML = `${this.media(p, idx + 1, p.cat === "small" ? p.tag : this.catLabel(cats, p.cat))}
       <div class="pj-body">
         <div class="tags"><span class="lang">${this.esc(p.tag)}</span>${p.year ? `<span class="year">${p.year}</span>` : ""}<span class="pj-st ${cls}">${st}</span></div>
         <h3 class="pj-h">${this.splitTitle(p.title)}</h3>
@@ -212,7 +230,7 @@ const View = {
         <div class="actions">${this.links(p) || '<span class="soon">Repo coming soon</span>'}</div>
       </div>`;
     if (animate && this.gsap) {
-      this.gsap.fromTo(d.querySelector(".cover"), { clipPath: "polygon(0 0,0 0,0 100%,0 100%)" }, { clipPath: "polygon(0 0,100% 0,100% 100%,0 100%)", duration: 0.45, ease: "power3.out", clearProps: "clipPath" });
+      this.gsap.fromTo(d.querySelector(".cover, .gallery"), { clipPath: "polygon(0 0,0 0,0 100%,0 100%)" }, { clipPath: "polygon(0 0,100% 0,100% 100%,0 100%)", duration: 0.45, ease: "power3.out", clearProps: "clipPath" });
       this.gsap.fromTo(d.querySelectorAll(".pj-body > *"), { autoAlpha: 0, x: 24 }, { autoAlpha: 1, x: 0, duration: 0.35, ease: "power3.out", stagger: 0.035, clearProps: "transform,opacity,visibility" });
     }
   },
@@ -287,7 +305,7 @@ const View = {
     const b = this.els.modalBody;
     this.paint(this.els.modalPanel, p);
     const label = p.cat === "small" ? p.tag : this.catLabel(cats, p.cat);
-    b.innerHTML = `${this.cover(p, idx + 1, label).replace('class="cover"', 'class="cover m-cover"')}
+    b.innerHTML = `${this.media(p, idx + 1, label).replace('class="cover"', 'class="cover m-cover"')}
       <div class="m-body${swap ? " swap" : ""}">
         <div class="tags"><span class="lang">${this.esc(p.tag)}</span>${p.year ? `<span class="year">${p.year}</span>` : ""}</div>
         <h2 id="m-title">${this.splitTitle(p.title)}</h2>

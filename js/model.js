@@ -28,6 +28,10 @@ const Model = {
   projects: [
     {
       id: "jiran-connect", repo: "jiran-connect", cat: "web", year: "2026", color: "#18c29c", cover: "JIRAN",
+      shots: [
+        { src: "assets/projects/jiran-connect-1.jpg", alt: "Jiran Connect landing page in English" },
+        { src: "assets/projects/jiran-connect-2.jpg", alt: "The same landing page in Arabic, laid out right to left" },
+        { src: "assets/projects/jiran-connect-3.jpg", alt: "Sign-in screen in Arabic with the demo account filled in" }],
       title: "JIRAN CONNECT", tag: "Next.js · TypeScript",
       desc: "Privacy-first UAE community platform that connects locals and newcomers through verified majlis, real gatherings and cultural exchange. Arabic-first, fully bilingual, with a custom Glass UI.",
       highlights: [
@@ -46,6 +50,9 @@ const Model = {
     },
     {
       id: "fnaz", repo: "FiveNightsAtZayeds", cat: "game", year: "2026", color: "#9b5cff", cover: "5 NIGHTS",
+      shots: [
+        { src: "assets/projects/fnaz-1.jpg", alt: "Five Nights at Zayed's main menu" },
+        { src: "assets/projects/fnaz-2.jpg", alt: "The newspaper intro shown before night 1" }],
       title: "FIVE NIGHTS AT ZAYED'S", tag: "Electron · JavaScript",
       desc: "Desktop horror game: survive five nights as Rashid at Salem's Candy. A canvas and JavaScript game engine packaged with Electron, with online co-op and versus modes.",
       highlights: [
@@ -63,6 +70,7 @@ const Model = {
     },
     {
       id: "ultraniko", repo: "UltraNiko-Updated", cat: "mod", year: "2026", color: "#f5c518", cover: "NIKO",
+      shots: [{ src: "assets/projects/ultraniko-1.jpg", alt: "The mod's icon: a Niko plush holding a light bulb" }],
       title: "ULTRANIKO UPDATED", tag: "ULTRAKILL mod",
       desc: "A recode of an old ULTRAKILL mod that swaps the red and blue skulls, soap, rockets, torches and landmines for a Niko plush, built on top of the UltraFumos mod.",
       highlights: [
@@ -76,6 +84,10 @@ const Model = {
     },
     {
       id: "portfolio", repo: "My-Persona-Portfolio", cat: "web", year: "2026", color: "#e60012", ink: "#fff", cover: "THIS SITE",
+      shots: [
+        { src: "assets/projects/portfolio-1.jpg", alt: "This portfolio's main menu with the Persona 3-style calendar" },
+        { src: "assets/projects/portfolio-2.jpg", alt: "The Skills screen with its hexagon chart" },
+        { src: "assets/projects/portfolio-3.jpg", alt: "The Projects select screen" }],
       title: "PERSONA PORTFOLIO", tag: "Vanilla JS",
       desc: "The site you're on. A Persona 3/5-inspired portfolio in plain HTML, CSS and JavaScript, with no framework and no build step.",
       highlights: [

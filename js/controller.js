@@ -96,6 +96,11 @@ const Controller = {
       const shown = View.applyFilter(Model.state.filter, true);
       if (shown.length && !shown.includes(Model.state.project)) this.selectProject(shown[0], false);
     });
+    // screenshot thumbnails, in the side panel and in the full-screen details
+    [document.getElementById("pj-detail"), View.els.modalBody].forEach((el, i) => el.addEventListener("click", e => {
+      const t = e.target.closest("[data-shot]"); if (!t) return;
+      this.play(); View.showShot(t, Model.projects[i === 0 ? Model.state.project : Model.state.modal]);
+    }));
     const list = document.getElementById("pj-list");
     list.addEventListener("click", e => {
       const b = e.target.closest(".pj-item"); if (!b) return;

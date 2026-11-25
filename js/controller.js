@@ -7,21 +7,31 @@ const Controller = {
   pal: { items: [], sel: 0, from: null },
   narrow: matchMedia("(max-width: 899px)"),
 
+  // Startup is split in two so the first paint isn't waiting on work nobody can use yet: the menu, routing and intro come first,
+  // and everything else (music, search palette, forms, skills, GSAP) is set up right after the first frame.
   init() {
     View.init();
     this.sound = Model.pref("sound", true); View.setSound(this.sound);
     Model.state.theme = Model.pref("theme", "p5");
-    Music.init();
     View.setTheme(Model.state.theme);
     Model.state.motion = Model.pref("motion", true); View.setMotion(Model.state.motion);
-    this.bindMenu(); this.bindKeyboard(); this.bindAudio(); this.bindContactForm(); this.bindProjects();
-    this.bindOverlays(); this.bindScroll(); this.bindPalette(); this.bindSkills();
+    this.bindMenu(); this.bindKeyboard(); this.bindAudio();
     addEventListener("popstate", () => this.go(this.fromHash(), false));   // back/forward buttons
     const s = this.fromHash();
     s === "home" ? View.showScreen("home") : this.enter(s);                // deep links like /#about
     this.select(0, true);
     let seen = false; try { seen = sessionStorage.getItem("pf:booted") === "1"; sessionStorage.setItem("pf:booted", "1"); } catch {}
     View.boot(!seen, () => { this.transitioning = false; this.prebuild(); });
+    // second half of startup, one piece per task so no single one holds the page
+    const later = [
+      () => Music.init(),
+      () => { this.bindContactForm(); this.bindProjects(); },
+      () => { this.bindOverlays(); this.bindScroll(); },
+      () => { this.bindPalette(); this.bindSkills(); },
+      () => View.loadGsap(),
+    ];
+    const run = () => { const job = later.shift(); if (!job) return; job(); setTimeout(run, 0); };
+    requestAnimationFrame(() => setTimeout(run, 0));
   },
 
   /* ---------- navigation ---------- */
@@ -369,9 +379,9 @@ const Controller = {
       if (k === "/") { e.preventDefault(); this.openPalette(); return; }
       if (k === "?") { this.openHelp(); return; }
       if (k === "m" || k === "M") { this.toggleSound(); return; }
-      if (k === "p" || k === "P") { Music.toggle(); return; }
-      if (k === "]") { Music.go(1); return; }
-      if (k === "[") { Music.go(-1); return; }
+      if (k === "p" || k === "P") { Music.audio && Music.toggle(); return; }
+      if (k === "]") { Music.audio && Music.go(1); return; }
+      if (k === "[") { Music.audio && Music.go(-1); return; }
       if (k === "Escape" && Music.open) { Music.toggleOpen(false); return; }
       if (k === "t" || k === "T") { this.cycleTheme(); return; }
       if (k === "b" || k === "B") { this.toggleMotion(); return; }

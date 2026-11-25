@@ -234,11 +234,18 @@ const Music = {
     this.sync();
   },
 
+  // Volume ramp with requestAnimationFrame (no animation library needed, so none has to load before the music can start).
   fade(to, seconds, done) {
-    if (this.fadeTween) this.fadeTween.kill();
+    if (this.fadeTween) { cancelAnimationFrame(this.fadeTween.raf); this.fadeTween = null; }
     const a = this.audio;
-    if (!seconds || !window.gsap) { a.volume = to; this.fadeTween = null; done && done(); return; }
-    this.fadeTween = gsap.to(a, { volume: to, duration: seconds, ease: "power1.inOut", onComplete: () => { this.fadeTween = null; done && done(); } });
+    if (!seconds) { a.volume = to; done && done(); return; }
+    const from = a.volume, t0 = performance.now(), tw = (this.fadeTween = {});
+    const step = now => {
+      const k = Math.min(1, (now - t0) / (seconds * 1000)), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      a.volume = Math.min(1, Math.max(0, from + (to - from) * e));
+      if (k < 1) tw.raf = requestAnimationFrame(step); else { this.fadeTween = null; done && done(); }
+    };
+    tw.raf = requestAnimationFrame(step);
   },
 
   /* ---------- display ---------- */

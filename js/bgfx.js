@@ -21,7 +21,7 @@
   function onWorker() {
     let w, done = false;
     const fail = () => { if (done) return; done = true; try { w && w.terminate(); } catch {} onMain(); };
-    try { w = new Worker("js/bgfx-worker.js?v=20261125q"); } catch { fail(); return; }
+    try { w = new Worker("js/bgfx-worker.js?v=20261125r"); } catch { fail(); return; }
     const timer = setTimeout(fail, 1500);
     w.onerror = () => { clearTimeout(timer); fail(); };
     w.onmessage = e => {

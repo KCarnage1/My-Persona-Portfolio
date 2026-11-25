@@ -25,9 +25,15 @@ const View = {
     this.els.menuItems.forEach((m, i) => m.style.setProperty("--m", i));
     document.querySelectorAll("[data-ransom]").forEach(el => this.ransomize(el));
     this.els.sfx.volume = 0.4;
-    this.gsap = !this.reduced && window.gsap && window.ScrollTrigger ? window.gsap : null;
-    if (this.gsap) this.gsap.registerPlugin(ScrollTrigger);
+    this.gsap = null;   // GSAP is only used for the skill radar and the repo-card reveal, so it loads later (see loadGsap)
     this.startClock(); this.startParallax(); this.startCursor(); this.startTilt();
+  },
+
+  // Loads GSAP and ScrollTrigger (about 115 KB to parse and run) after the page is up, instead of before the first paint.
+  loadGsap() {
+    if (this.reduced || this.gsap) return;
+    const add = src => new Promise((ok, no) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = no; document.head.append(s); });
+    add("js/vendor/gsap.min.js?v=3.12.5").then(() => add("js/vendor/ScrollTrigger.min.js?v=3.12.5")).then(() => { this.gsap = window.gsap; this.gsap.registerPlugin(window.ScrollTrigger); }).catch(() => {});
   },
 
   hash(str) { let h = 9; for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 387420489); return (h ^ (h >>> 9)) >>> 0; },

@@ -4,7 +4,7 @@
    p3r Persona 3 Reload: deep blue, the moon, a clock ring, glass slabs and the Dark Hour / Velvet Room scenes */
 (() => {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches, R = Math.random, TAU = Math.PI * 2;
-  const bg = document.getElementById("bg"), c = document.createElement("canvas"), ctx = c.getContext("2d");
+  const bg = document.getElementById("bg"), c = document.createElement("canvas"), ctx = c.getContext("2d", { alpha: false });
   c.id = "bgfx"; c.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block";
   bg.insertBefore(c, bg.firstChild); document.body.classList.add("fx");
   let W, H, m, mx = 0, my = 0, sx = 0, sy = 0, scene = document.body.dataset.screen || "home";
@@ -19,7 +19,7 @@
     W = c.width = Math.round(innerWidth * k); H = c.height = Math.round(innerHeight * k); m = Math.min(W, H); };
   addEventListener("resize", resize); resize();
   addEventListener("mousemove", e => { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; }, { passive: true });
-  let paused = false, lastT = 0, running = false, f = 1, prevT = 0;   // f = frames elapsed at 60 Hz, so motion speed never depends on the refresh rate
+  let paused = false, holds = 0, lastT = 0, running = false, f = 1, prevT = 0;   // f = frames elapsed at 60 Hz, so motion speed never depends on the refresh rate
   const redrawStill = () => { if (reduced || paused) requestAnimationFrame(still); };
   new MutationObserver(() => { scene = document.body.dataset.screen; redrawStill(); }).observe(document.body, { attributes: true, attributeFilter: ["data-screen"] });
   new MutationObserver(redrawStill).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
@@ -233,7 +233,7 @@
   // one static frame: used for reduced motion and when the visitor pauses the background
   function still() { pick()(lastT); }
   function frame(t) {
-    if (paused || reduced) { running = false; return; }
+    if (paused || reduced || holds > 0) { running = false; return; }
     requestAnimationFrame(frame);
     // The wallpaper moves slowly, so it is drawn at most about 70 times a second: on a 120 or 240 Hz screen that leaves the
     // rest of the frame to the cursor, scrolling and menus, which still run at the full refresh rate.
@@ -244,8 +244,13 @@
     sx += (mx - sx) * e; sy += (my - sy) * e; lastT = t;
     pick()(t);
   }
-  function start() { if (!running && !paused && !reduced) { running = true; prevT = 0; requestAnimationFrame(frame); } }
+  function start() { if (!running && !paused && !reduced && holds === 0) { running = true; prevT = 0; requestAnimationFrame(frame); } }
   addEventListener("resize", () => { if (paused || reduced) requestAnimationFrame(still); });
-  window.BGFX = { setPaused(p) { paused = p; p ? requestAnimationFrame(still) : start(); } };
+  // hold(true) freezes the wallpaper while something big animates or covers it (screen wipes, windows), so the browser isn't
+  // painting a canvas nobody can see; hold(false) lets it carry on. Calls nest.
+  window.BGFX = {
+    setPaused(p) { paused = p; p ? requestAnimationFrame(still) : start(); },
+    hold(on) { holds = Math.max(0, holds + (on ? 1 : -1)); if (holds === 0) start(); },
+  };
   reduced ? requestAnimationFrame(still) : start();
 })();

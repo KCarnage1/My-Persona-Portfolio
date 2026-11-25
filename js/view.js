@@ -114,7 +114,8 @@ const View = {
     this.ransomize(this.els.wipeText, label); this.els.wipeKicker.textContent = kicker;
     const T = x => `translateX(${x * dir}%) skewX(-14deg)`;
     const opt = (d, i) => ({ duration: d, delay: i * 60, easing: "cubic-bezier(.76,0,.24,1)", fill: "both" });
-    w.style.display = "block";
+    w.style.display = "block"; let freed = false; const free = () => { if (!freed) { freed = true; window.BGFX && BGFX.hold(false); } };
+    window.BGFX && BGFX.hold(true); setTimeout(free, 3000);
     lab.animate([{ opacity: 0, transform: `translateX(${-60 * dir}px) skewX(-8deg)` }, { opacity: 1, transform: "none" }], { duration: 300, delay: 240, easing: "cubic-bezier(.2,.8,.2,1)", fill: "both" });
     Promise.all(panes.map((p, i) => p.animate([{ transform: T(-130) }, { transform: T(0) }], opt(400, i)).finished))
       .then(() => new Promise(r => setTimeout(r, 150)))
@@ -123,7 +124,7 @@ const View = {
         lab.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: `translateX(${80 * dir}px)` }], { duration: 220, easing: "ease-in", fill: "both" });
         return Promise.all(panes.map((p, i) => p.animate([{ transform: T(0) }, { transform: T(130) }], opt(460, 2 - i)).finished));
       })
-      .then(() => { w.style.display = "none"; [...panes, lab].forEach(p => p.getAnimations().forEach(a => a.cancel())); done(); });
+      .then(() => { w.style.display = "none"; [...panes, lab].forEach(p => p.getAnimations().forEach(a => a.cancel())); free(); done(); });
   },
 
   // First visit in a session: the panes start covering the screen with a short title card, then slide away.
@@ -331,10 +332,12 @@ const View = {
 
   openOverlay(el, focusEl) {
     el.hidden = false; void el.offsetWidth; el.classList.add("open");
+    if (!el._held) { el._held = true; window.BGFX && BGFX.hold(true); }   // the wallpaper is covered, so stop painting it
     (focusEl || el.querySelector("[tabindex='-1']")).focus({ preventScroll: true });
   },
   closeOverlay(el) {
     el.classList.remove("open");
+    if (el._held) { el._held = false; window.BGFX && BGFX.hold(false); }
     setTimeout(() => { if (!el.classList.contains("open")) el.hidden = true; }, this.reduced ? 0 : 450);
   },
 

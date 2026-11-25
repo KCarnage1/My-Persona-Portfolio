@@ -19,7 +19,7 @@
     W = c.width = Math.round(innerWidth * k); H = c.height = Math.round(innerHeight * k); m = Math.min(W, H); };
   addEventListener("resize", resize); resize();
   addEventListener("mousemove", e => { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; }, { passive: true });
-  let paused = false, holds = 0, lastT = 0, running = false, f = 1, prevT = 0;   // f = frames elapsed at 60 Hz, so motion speed never depends on the refresh rate
+  let paused = false, holds = 0, lastT = 0, running = false, f = 1, prevT = 0, lastRaf = 0, frameMs = 0, skipN = 0, tick = 0, phase = 0;   // f = frames elapsed at 60 Hz, so motion speed never depends on the refresh rate
   const redrawStill = () => { if (reduced || paused) requestAnimationFrame(still); };
   new MutationObserver(() => { scene = document.body.dataset.screen; redrawStill(); }).observe(document.body, { attributes: true, attributeFilter: ["data-screen"] });
   new MutationObserver(redrawStill).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
@@ -235,16 +235,22 @@
   function frame(t) {
     if (paused || reduced || holds > 0) { running = false; return; }
     requestAnimationFrame(frame);
-    // The wallpaper moves slowly, so it is drawn at most about 70 times a second: on a 120 or 240 Hz screen that leaves the
-    // rest of the frame to the cursor, scrolling and menus, which still run at the full refresh rate.
+    // The wallpaper moves slowly, so it only needs to be drawn about 60 to 80 times a second. The refresh rate is measured, and
+    // the wallpaper is drawn on every nth frame where n is a whole number (1 at 60 Hz, 2 at 120 to 165 Hz, 3 at 240 Hz), so the
+    // spacing between draws is even instead of alternating long and short. The cursor, menus and scrolling still run at the
+    // full refresh rate.
+    const raw = t - lastRaf; lastRaf = t;
+    if (raw > 0 && raw < 100) { frameMs = frameMs ? frameMs + (raw - frameMs) * .1 : raw; }
+    if (skipN === 0 || (++tick % 30 === 0)) skipN = Math.max(1, Math.ceil(11 / Math.max(frameMs, 1)));
+    if (prevT && ++phase < skipN) return;
+    phase = 0;
     const dt = t - prevT;
-    if (prevT && dt < 13.5) return;
     f = Math.min(prevT ? dt : 16.7, 50) / 16.67; prevT = t;
     const e = 1 - Math.exp(-f * .05);
     sx += (mx - sx) * e; sy += (my - sy) * e; lastT = t;
     pick()(t);
   }
-  function start() { if (!running && !paused && !reduced && holds === 0) { running = true; prevT = 0; requestAnimationFrame(frame); } }
+  function start() { if (!running && !paused && !reduced && holds === 0) { running = true; prevT = 0; lastRaf = 0; phase = 0; requestAnimationFrame(frame); } }
   addEventListener("resize", () => { if (paused || reduced) requestAnimationFrame(still); });
   // hold(true) freezes the wallpaper while something big animates or covers it (screen wipes, windows), so the browser isn't
   // painting a canvas nobody can see; hold(false) lets it carry on. Calls nest.

@@ -201,8 +201,11 @@ const View = {
     g.querySelectorAll(".thumb-btn").forEach(b => b.setAttribute("aria-pressed", b === btn));
     g.querySelector("figcaption").textContent = sh.alt;
     const swap = () => { img.src = sh.src; img.alt = sh.alt; };
-    if (this.gsap) this.gsap.timeline().to(img, { autoAlpha: 0, x: -20, duration: 0.15, onComplete: swap }).fromTo(img, { x: 30 }, { autoAlpha: 1, x: 0, duration: 0.3, ease: "power3.out", clearProps: "transform,opacity,visibility" });
-    else swap();
+    if (this.reduced) { swap(); return; }
+    // slide the old shot out, swap while it is invisible, slide the new one in (no GSAP, so no style reads)
+    img.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateX(-20px)" }], { duration: 150, easing: "ease-in", fill: "forwards" }).finished
+      .then(() => { swap(); const a = img.animate([{ opacity: 0, transform: "translateX(30px)" }, { opacity: 1, transform: "none" }], { duration: 300, easing: "cubic-bezier(.22,1,.36,1)" }); img.getAnimations().forEach(x => x !== a && x.cancel()); return a.finished; })
+      .catch(() => {});
   },
 
   // ↗ marks links that leave the site in a new tab; it is the only arrow used on buttons

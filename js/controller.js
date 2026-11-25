@@ -21,7 +21,7 @@ const Controller = {
     s === "home" ? View.showScreen("home") : this.enter(s);                // deep links like /#about
     this.select(0, true);
     let seen = false; try { seen = sessionStorage.getItem("pf:booted") === "1"; sessionStorage.setItem("pf:booted", "1"); } catch {}
-    View.boot(!seen, () => { this.transitioning = false; });
+    View.boot(!seen, () => { this.transitioning = false; this.prebuild(); });
   },
 
   /* ---------- navigation ---------- */
@@ -44,13 +44,32 @@ const Controller = {
     });
   },
 
-  enter(screen) {
-    Model.state.screen = screen;
+  // Building a screen's markup is the heavy part of switching to it, so it happens once, ahead of time while the browser is
+  // idle (see prebuild), and the switch itself only has to flip the screen on.
+  build(screen) {
     if (screen === "about" && !Model.state.aboutBuilt) { View.renderAbout(Model.about, Model.traits); Model.state.aboutBuilt = true; }
     if (screen === "skills" && !Model.state.skillsBuilt) {
       View.skProjects = Object.fromEntries(Model.projects.map((p, i) => [p.id, { p, i }]));
       View.renderSkillTabs(Model.skills); Model.state.skillsBuilt = true;
     }
+    if (screen === "projects" && !Model.state.projectsBuilt) {
+      const counts = Model.projects.reduce((o, p) => (o[p.cat] = (o[p.cat] || 0) + 1, o), { all: Model.projects.length });
+      View.renderFilters(Model.categories, counts, Model.state.filter);
+      View.renderProjectList(Model.projects);
+      View.applyFilter(Model.state.filter);
+      Model.state.projectsBuilt = true;
+    }
+  },
+  prebuild() {
+    const idle = window.requestIdleCallback ? f => requestIdleCallback(f, { timeout: 1500 }) : f => setTimeout(f, 200);
+    ["about", "skills", "projects"].forEach(name => idle(() => this.build(name)));
+    // warm the project screenshots so the first visit doesn't decode them mid-transition
+    idle(() => Model.projects.forEach(p => (p.shots || []).slice(0, 1).forEach(sh => { const im = new Image(); im.decoding = "async"; im.src = sh.src; im.decode && im.decode().catch(() => {}); })));
+  },
+
+  enter(screen) {
+    Model.state.screen = screen;
+    this.build(screen);
     View.showScreen(screen);
     if (screen === "projects") this.loadProjects();
     if (screen === "skills") View.showSkillGroup(Model.skills, Model.state.skillGroup, Model.state.skill, { fromZero: true });
@@ -72,13 +91,7 @@ const Controller = {
 
   /* ---------- projects ---------- */
   loadProjects() {
-    if (!Model.state.projectsBuilt) {
-      const counts = Model.projects.reduce((o, p) => (o[p.cat] = (o[p.cat] || 0) + 1, o), { all: Model.projects.length });
-      View.renderFilters(Model.categories, counts, Model.state.filter);
-      View.renderProjectList(Model.projects);
-      View.applyFilter(Model.state.filter);
-      Model.state.projectsBuilt = true;
-    }
+    this.build("projects");
     View.showProjectDetail(Model.projects[Model.state.project], Model.state.project, Model.categories, true);
     if (!Model.state.reposLoaded) this.loadRepos();
   },

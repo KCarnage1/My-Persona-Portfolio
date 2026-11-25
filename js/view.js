@@ -52,24 +52,31 @@ const View = {
   /* ---------- screens ---------- */
   showScreen(name) {
     const S = this.els.screens;
-    Object.values(S).forEach(s => s.classList.remove("active"));
-    const s = S[name]; s.classList.add("active"); s.scrollTop = 0;
+    // reset the old screen's scroll while it is still laid out; setting scrollTop on the new one would force a layout mid-switch
+    Object.values(S).forEach(o => { if (o.classList.contains("active") && o.scrollTop) o.scrollTop = 0; o.classList.remove("active"); });
+    const s = S[name]; s.classList.add("active");
     document.body.dataset.screen = name;
     s.querySelectorAll(".reveal").forEach((e, i) => e.style.setProperty("--i", Math.min(i, 10)));
     this.els.tabs.forEach(t => { const on = t.dataset.nav === name; t.classList.toggle("on", on); on ? t.setAttribute("aria-current", "page") : t.removeAttribute("aria-current"); });
     document.title = (name === "home" ? "" : name[0].toUpperCase() + name.slice(1) + " · ") + "Portfolio · Cloud Engineering / IT";
-    this.updateScroll(s);
-    // scroll-reveal for long text, replayed on every visit
-    this.io && this.io.disconnect();
-    const sr = s.querySelectorAll(".sr");
-    if (sr.length) {
-      sr.forEach(e => e.classList.remove("seen"));
-      this.io = new IntersectionObserver(es => es.forEach(en => {
-        if (en.isIntersecting) { en.target.classList.add("seen"); this.io.unobserve(en.target); }
-      }), { root: s, threshold: 0.12 });
-      sr.forEach(e => this.io.observe(e));
-    }
-    if (this.gsap) requestAnimationFrame(() => ScrollTrigger.refresh());
+    // Everything below needs layout measurements, which would force a full layout in the middle of the switch. It runs a moment
+    // later, after the first frame of the new screen has been drawn.
+    clearTimeout(this.lateT);
+    this.lateT = setTimeout(() => {
+      if (document.body.dataset.screen !== name) return;
+      this.updateScroll(s);
+      // scroll-reveal for long text, replayed on every visit
+      this.io && this.io.disconnect();
+      const sr = s.querySelectorAll(".sr");
+      if (sr.length) {
+        this.io = new IntersectionObserver(es => es.forEach(en => {
+          if (en.isIntersecting) { en.target.classList.add("seen"); this.io.unobserve(en.target); }
+        }), { root: s, threshold: 0.12 });
+        sr.forEach(e => this.io.observe(e));
+      }
+      if (this.gsap && name === "projects") ScrollTrigger.refresh();
+    }, 90);
+    s.querySelectorAll(".sr.seen").forEach(e => e.classList.remove("seen"));
   },
 
   setMenuSelection(i, caption) {
@@ -121,6 +128,10 @@ const View = {
       .then(() => new Promise(r => setTimeout(r, 150)))
       .then(() => {
         swap();
+        // let the new screen's style, layout and first paint finish while the curtain still covers it, then sweep away
+        return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      })
+      .then(() => {
         lab.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: `translateX(${80 * dir}px)` }], { duration: 220, easing: "ease-in", fill: "both" });
         return Promise.all(panes.map((p, i) => p.animate([{ transform: T(0) }, { transform: T(130) }], opt(460, 2 - i)).finished));
       })
@@ -228,6 +239,14 @@ const View = {
       `<h3 class="pj-group" data-group="small">Smaller builds</h3><ul>${small.map(([p, i]) => row(p, i)).join("")}</ul>`;
   },
 
+  // Entrance animation with the Web Animations API instead of GSAP. GSAP reads every element's computed style to find its start
+  // values, which forces a style recalculation per element right after the DOM changed (that was about 25 ms per screen
+  // switch). Here the keyframes are given up front, nothing is read, and transforms and opacity run off the main thread.
+  tween(els, from, to, { duration = 0.35, stagger = 0, delay = 0 } = {}) {
+    if (this.reduced) return;
+    [...els].forEach((el, i) => el.animate([from, to], { duration: duration * 1000, delay: (delay + i * stagger) * 1000, easing: "cubic-bezier(.22,1,.36,1)", fill: "backwards" }));
+  },
+
   showProjectDetail(p, idx, cats, animate) {
     document.querySelectorAll(".pj-item").forEach(b => b.setAttribute("aria-pressed", +b.dataset.idx === idx));
     const d = document.getElementById("pj-detail"), [st, cls] = this.status(p);
@@ -241,9 +260,9 @@ const View = {
         ${p.stack ? `<h4>Built with</h4><ul class="stack">${p.stack.map(x => `<li>${this.esc(x)}</li>`).join("")}</ul>` : ""}
         <div class="actions">${this.links(p) || '<span class="soon">Repo coming soon</span>'}</div>
       </div>`;
-    if (animate && this.gsap) {
-      this.gsap.fromTo(d.querySelector(".cover, .gallery"), { clipPath: "polygon(0 0,0 0,0 100%,0 100%)" }, { clipPath: "polygon(0 0,100% 0,100% 100%,0 100%)", duration: 0.45, ease: "power3.out", clearProps: "clipPath" });
-      this.gsap.fromTo(d.querySelectorAll(".pj-body > *"), { autoAlpha: 0, x: 24 }, { autoAlpha: 1, x: 0, duration: 0.35, ease: "power3.out", stagger: 0.035, clearProps: "transform,opacity,visibility" });
+    if (animate) {
+      this.tween([d.querySelector(".cover, .gallery")], { clipPath: "polygon(0 0,0 0,0 100%,0 100%)" }, { clipPath: "polygon(0 0,100% 0,100% 100%,0 100%)" }, { duration: 0.45 });
+      this.tween(d.querySelectorAll(".pj-body > *"), { opacity: 0, transform: "translateX(24px)" }, { opacity: 1, transform: "none" }, { stagger: 0.035 });
     }
   },
 
@@ -257,7 +276,7 @@ const View = {
       const ul = h.nextElementSibling; h.hidden = ul.hidden = !ul.querySelector("li:not([hidden])");
     });
     const fc = document.getElementById("feat-count"); if (fc) fc.textContent = document.querySelectorAll('.pj-group[data-group=main] + ul li:not([hidden])').length;
-    if (animate && this.gsap) this.gsap.fromTo(shown, { autoAlpha: 0, x: -24 }, { autoAlpha: 1, x: 0, duration: 0.35, ease: "power3.out", stagger: 0.04, clearProps: "transform,opacity,visibility" });
+    if (animate) this.tween(shown, { opacity: 0, transform: "translateX(-24px)" }, { opacity: 1, transform: "none" }, { stagger: 0.04 });
     return shown.map(b => +b.dataset.idx);
   },
 
@@ -409,8 +428,8 @@ const View = {
       return `<li><button class="sk-item" data-si="${i}" aria-pressed="false">${this.pips(r)}<span class="sk-name">${this.esc(it.name)}</span><span class="sk-bar" aria-hidden="true"><i style="--v:${it.v}%"></i></span><span class="sk-v"><span class="sr-only">level </span>${it.v}</span></button></li>`;
     }).join("");
     this.morphRadar(g.items.map(it => it.v), opts.fromZero);
-    if (this.gsap) this.gsap.fromTo("#sk-list .sk-item", { autoAlpha: 0, x: 30 }, { autoAlpha: 1, x: 0, duration: 0.4, ease: "power3.out", stagger: 0.045, delay: opts.fromZero ? 0.3 : 0, clearProps: "transform,opacity,visibility" });
-    if (this.gsap) this.gsap.fromTo("#sk-list .sk-bar i", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: "power3.out", stagger: 0.045, delay: opts.fromZero ? 0.4 : 0.1 });
+    this.tween(document.querySelectorAll("#sk-list .sk-item"), { opacity: 0, transform: "translateX(30px)" }, { opacity: 1, transform: "none" }, { duration: 0.4, stagger: 0.045, delay: opts.fromZero ? 0.3 : 0 });
+    this.tween(document.querySelectorAll("#sk-list .sk-bar i"), { transform: "scaleX(0)" }, { transform: "scaleX(1)" }, { duration: 0.7, stagger: 0.045, delay: opts.fromZero ? 0.4 : 0.1 });
     this.showSkill(g, si);
   },
 

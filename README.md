@@ -1,6 +1,34 @@
-# Persona Portfolio
+<h1 align="center">Persona Portfolio</h1>
+
+<p align="center"><b>A portfolio you can switch between Persona 5, Persona 5 Royal and Persona 3 Reload.</b></p>
+
+<p align="center">
+  <a href="https://kcarnage1.github.io/My-Persona-Portfolio/"><img src="https://img.shields.io/badge/live-GitHub%20Pages-e60012?style=flat-square" alt="Open the live site"></a>
+  <img src="https://img.shields.io/badge/framework-none-2ea44f?style=flat-square" alt="No framework">
+  <img src="https://img.shields.io/badge/build%20step-none-2ea44f?style=flat-square" alt="No build step">
+</p>
+
+<p align="center">
+  <img src="assets/projects/portfolio-1.jpg" alt="The portfolio home screen with its menu, calendar and slashed red-and-black background" width="860">
+</p>
+
 
 A Persona 5, Persona 5 Royal and Persona 3 Reload-styled (switchable) portfolio in plain HTML, CSS and JavaScript. No framework and no build step: open `index.html`, or host the folder on GitHub Pages as-is.
+
+## What is in it
+
+- Home, Projects, Skills, About and Contact screens with wipe transitions between them and a quick-jump search.
+- Three looks (Persona 5, Persona 5 Royal, Persona 3 Reload), each with its own colours, lettering and animated background for every screen.
+- A music playlist with a player, volume, seeking and an equalizer, plus sound effects and a sprite cursor with a trail.
+- Respects reduced-motion settings, works by keyboard and on a phone, and the animation runs by elapsed time so it feels the same on 60 Hz and 120 Hz+ screens.
+
+## Run it
+
+```bash
+python3 -m http.server 8000    # then open http://localhost:8000
+```
+
+Any static file server works. Music seeking needs one that supports range requests, which GitHub Pages does.
 
 ## Editing content
 

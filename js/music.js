@@ -1,0 +1,162 @@
+/* MUSIC: the background track and its player. Off until the visitor starts it; remembers volume and whether it was left playing. */
+const Music = {
+  track: { title: "Beneath the Mask", artist: "Persona 5 soundtrack" },
+  open: false,
+  playing: false,
+  wanted: false,
+  fadeTween: null,
+  raf: 0,
+  an: null,
+  data: null,
+
+  init() {
+    const $ = id => document.getElementById(id);
+    Object.assign(this, {
+      audio: $("music"), panel: $("player"), btn: $("music-btn"), play: $("mp-play"), seek: $("mp-seek"), vol: $("mp-vol"),
+      loop: $("mp-loop"), cur: $("mp-cur"), dur: $("mp-dur"), status: $("mp-status"), viz: $("mp-viz"),
+    });
+    this.reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    this.volume = Model.pref("musicVolume", 0.6);
+    this.vol.value = Math.round(this.volume * 100);
+    this.audio.volume = 0;
+    this.audio.loop = Model.pref("musicLoop", true);
+    this.loop.setAttribute("aria-pressed", this.audio.loop);
+    this.wanted = Model.pref("musicOn", false);
+
+    this.btn.addEventListener("click", () => this.toggleOpen());
+    this.play.addEventListener("click", () => this.toggle());
+    this.loop.addEventListener("click", () => {
+      this.audio.loop = !this.audio.loop;
+      this.loop.setAttribute("aria-pressed", this.audio.loop); Model.setPref("musicLoop", this.audio.loop);
+    });
+    this.vol.addEventListener("input", () => {
+      this.volume = this.vol.value / 100; Model.setPref("musicVolume", this.volume);
+      if (this.playing && !this.fadeTween) this.audio.volume = this.volume;
+    });
+    this.seek.addEventListener("input", () => {
+      if (isFinite(this.audio.duration)) this.audio.currentTime = (this.seek.value / 1000) * this.audio.duration;
+      this.paint();
+    });
+    this.panel.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); this.toggleOpen(false); this.btn.focus(); } });
+    document.addEventListener("pointerdown", e => { if (this.open && !this.panel.contains(e.target) && !this.btn.contains(e.target)) this.toggleOpen(false); });
+
+    const a = this.audio;
+    a.addEventListener("timeupdate", () => this.paint());
+    a.addEventListener("durationchange", () => this.paint());
+    a.addEventListener("waiting", () => this.say("Loading…"));
+    a.addEventListener("playing", () => { this.say(""); this.sync(); });
+    a.addEventListener("pause", () => this.sync());
+    a.addEventListener("ended", () => { this.say("Finished. Press play to hear it again."); this.sync(); });
+    a.addEventListener("error", () => { this.playing = false; this.sync(); this.say("The music file didn't load. Press play to try again."); });
+
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({ title: this.track.title, artist: this.track.artist });
+      navigator.mediaSession.setActionHandler("play", () => this.start());
+      navigator.mediaSession.setActionHandler("pause", () => this.stop());
+    }
+
+    // Browsers only allow sound after a gesture. If it was left playing last visit, resume at the first click or key press.
+    if (this.wanted) {
+      const resume = () => { removeEventListener("pointerdown", resume, true); removeEventListener("keydown", resume, true); if (this.wanted && !this.playing) this.start(true); };
+      addEventListener("pointerdown", resume, true); addEventListener("keydown", resume, true);
+    }
+    this.sync(); this.paint();
+  },
+
+  say(msg) { this.status.textContent = msg; },
+  fmt(s) { return isFinite(s) ? Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0") : "0:00"; },
+
+  toggleOpen(force) {
+    this.open = force === undefined ? !this.open : force;
+    this.panel.hidden = !this.open;
+    this.btn.setAttribute("aria-expanded", this.open);
+    if (this.open) { this.play.focus({ preventScroll: true }); this.draw(); }
+  },
+
+  toggle() { this.playing ? this.stop() : this.start(); },
+
+  // The analyser reads the real signal for the equalizer. If Web Audio isn't available the track still plays, just without bars.
+  ensureAnalyser() {
+    if (this.an || this.anFailed) return;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AC();
+      const src = this.ctx.createMediaElementSource(this.audio);
+      this.an = this.ctx.createAnalyser(); this.an.fftSize = 64; this.an.smoothingTimeConstant = 0.7;
+      src.connect(this.an); this.an.connect(this.ctx.destination);
+      this.data = new Uint8Array(this.an.frequencyBinCount);
+    } catch { this.anFailed = true; this.an = null; }
+  },
+
+  async start(quiet) {
+    this.wanted = true; Model.setPref("musicOn", true);
+    if (!this.audio.getAttribute("src")) return;
+    this.ensureAnalyser();
+    try {
+      if (this.ctx && this.ctx.state === "suspended") await this.ctx.resume();
+      const saved = +sessionStorage.getItem("pf:musicAt");
+      if (saved > 0 && this.audio.currentTime === 0 && !this.audio.ended) this.audio.currentTime = saved;
+      this.say("Loading…");
+      await this.audio.play();
+      this.playing = true;
+      this.fade(this.volume, this.reduced ? 0 : 1.2);
+      if (!quiet) Controller.play();
+    } catch (e) {
+      this.playing = false;
+      if (e && e.name === "NotAllowedError") this.say("Your browser wants a click first. Press play.");
+      else if (e && e.name !== "AbortError") this.say("The music file didn't load. Press play to try again.");
+    }
+    this.sync();
+  },
+
+  stop() {
+    this.wanted = false; Model.setPref("musicOn", false);
+    this.playing = false;
+    this.fade(0, this.reduced ? 0 : 0.5, () => this.audio.pause());
+    this.sync();
+  },
+
+  fade(to, seconds, done) {
+    if (this.fadeTween) this.fadeTween.kill();
+    const a = this.audio;
+    if (!seconds || !window.gsap) { a.volume = to; this.fadeTween = null; done && done(); return; }
+    this.fadeTween = gsap.to(a, { volume: to, duration: seconds, ease: "power1.inOut", onComplete: () => { this.fadeTween = null; done && done(); } });
+  },
+
+  sync() {
+    const on = this.playing && !this.audio.paused;
+    this.btn.classList.toggle("playing", on);
+    this.play.setAttribute("aria-label", on ? "Pause" : "Play");
+    this.play.classList.toggle("is-playing", on);
+    this.btn.title = on ? "Music playing (P pauses)" : "Music (P plays)";
+    this.draw();
+  },
+
+  paint() {
+    const a = this.audio, d = a.duration;
+    this.cur.textContent = this.fmt(a.currentTime); this.dur.textContent = this.fmt(d);
+    if (isFinite(d) && d > 0 && document.activeElement !== this.seek) this.seek.value = Math.round((a.currentTime / d) * 1000);
+    this.seek.setAttribute("aria-valuetext", this.fmt(a.currentTime) + " of " + this.fmt(d));
+    if (a.currentTime > 0) try { sessionStorage.setItem("pf:musicAt", String(a.currentTime)); } catch {}
+  },
+
+  draw() {
+    cancelAnimationFrame(this.raf);
+    const c = this.viz, ctx = c.getContext("2d"), w = c.width, h = c.height;
+    ctx.clearRect(0, 0, w, h);
+    const live = this.open && this.playing && this.an && !this.reduced && !document.hidden;
+    const n = 16, gap = 4, bw = (w - gap * (n - 1)) / n;
+    const frame = () => {
+      ctx.clearRect(0, 0, w, h);
+      if (live) this.an.getByteFrequencyData(this.data);
+      for (let i = 0; i < n; i++) {
+        const v = live ? this.data[Math.min(this.data.length - 1, Math.floor(i * 1.6))] / 255 : 0.04;
+        const bh = Math.max(3, v * h);
+        ctx.fillStyle = i % 5 === 2 ? "#ffffff" : "#e60012";
+        ctx.fillRect(i * (bw + gap), h - bh, bw, bh);
+      }
+      if (live && this.open && this.playing) this.raf = requestAnimationFrame(frame);
+    };
+    frame();
+  },
+};

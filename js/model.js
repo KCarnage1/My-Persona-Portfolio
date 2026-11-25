@@ -18,13 +18,13 @@ const Model = {
     { id: "web", label: "Web" },
     { id: "game", label: "Games" },
     { id: "mod", label: "Mods" },
-    { id: "small", label: "Smaller builds" },
+    { id: "tool", label: "Tools" },
   ],
 
   /* ---------- projects ----------
      To add one: copy a block below. `links` is a list of buttons ({ label, url, primary }).
      `img` (optional) = a screenshot path like "assets/projects/name.jpg"; without it the card draws its own cover.
-     `cat` decides which filter it shows under. Projects with cat "small" go in the "Smaller builds" group. */
+     `cat` decides which filter it shows under: web, game, mod or tool. A project with cat "small" would go in a "Smaller builds" group instead. */
   projects: [
     {
       id: "jiran-connect", repo: "jiran-connect", cat: "web", year: "2026", color: "#18c29c", cover: "JIRAN",
@@ -102,15 +102,74 @@ const Model = {
       links: [{ label: "Code", url: "https://github.com/KCarnage1/My-Persona-Portfolio", primary: true }],
     },
 
-    // smaller builds (no public repo yet → card shows "Repo coming soon")
-    { id: "task-manager", cat: "small", color: "#3dc8ff", cover: "TASKS", title: "CLOUD TASK MANAGER", tag: "Full-Stack",
-      desc: "Full-stack task manager with user accounts, task creation and status tracking. HTML, CSS, JavaScript and a Java backend, deployed on a cloud virtual machine with input validation and access control." },
-    { id: "backup-tool", cat: "small", color: "#5b9bd5", cover: "BACKUP", title: "CLOUD BACKUP TOOL", tag: "Python",
-      desc: "Python script that watches a folder, compresses new files and uploads them to cloud storage on a schedule. Keeps a log and retries failed uploads so nothing gets lost quietly." },
-    { id: "monitoring", cat: "small", color: "#e8a33d", cover: "MONITOR", title: "SERVER MONITORING DASHBOARD", tag: "Dashboard",
-      desc: "Tracks CPU, memory and disk usage on a server and shows it as live charts in the browser. Python collects the data; the front end is JavaScript, HTML and CSS." },
-    { id: "library", cat: "small", color: "#b07219", cover: "LIBRARY", title: "LIBRARY MANAGEMENT SYSTEM", tag: "Java",
-      desc: "Java program for managing books, members and loans with object-oriented design and file-based storage. Core logic was also rewritten in C++ to compare structure and memory handling." },
+    {
+      id: "task-manager", repo: "cloud-task-manager", cat: "web", year: "2026", color: "#2dd4bf", cover: "TASKS",
+      shots: [
+        { src: "assets/projects/task-manager-1.jpg", alt: "The task board with Waiting, In progress and Finished columns" },
+        { src: "assets/projects/task-manager-2.jpg", alt: "The same board in dark mode" },
+        { src: "assets/projects/task-manager-3.jpg", alt: "The edit dialog for a task" }],
+      title: "CLOUD TASK MANAGER", tag: "Java · JavaScript",
+      desc: "Full-stack task manager with user accounts, task creation and status tracking. A Java backend with no framework serves a plain HTML, CSS and JavaScript front end, with deployment files for a cloud VM.",
+      highlights: [
+        "Accounts with PBKDF2 password hashing, hashed server-side sessions in HttpOnly SameSite cookies, and login rate limiting.",
+        "Access control: every query is scoped to the signed-in user, and someone else's task answers 404 so IDs can't be probed.",
+        "Server-side validation with a message per field, JSON-only bodies capped at 64 KB, and a strict Content-Security-Policy.",
+        "Every status change is recorded with a timestamp and shown in the task's history.",
+        "21 automated checks, including HTTP tests for sessions, cross-site requests, rate limits and cross-user access.",
+        "Dockerfile, systemd unit and Caddy config for a cloud VM. Built and tested locally; the deployment files are untested on a real VM.",
+      ],
+      stack: ["Java 21", "JDK HTTP server", "JavaScript", "HTML", "CSS", "Docker", "systemd", "Caddy"],
+      links: [{ label: "Code", url: "https://github.com/KCarnage1/cloud-task-manager", primary: true }],
+    },
+    {
+      id: "backup-tool", repo: "cloud-backup-tool", cat: "tool", year: "2026", color: "#38bdf8", cover: "BACKUP",
+      shots: [{ src: "assets/projects/backup-tool-1.jpg", alt: "Terminal output: a backup pass, a failed upload retried with backoff, then a restore" }],
+      title: "CLOUD BACKUP TOOL", tag: "Python",
+      desc: "Watches a folder, compresses new and changed files and uploads them on a schedule. It keeps a log and retries failed uploads, so nothing gets lost quietly.",
+      highlights: [
+        "Change detection by size and modification time first, then SHA-256, so a touched but unchanged file isn't uploaded again.",
+        "Retries with capped exponential backoff and jitter. A file that still fails stays queued with its last error and is retried on the next pass.",
+        "Storage is pluggable: any folder, or an S3-compatible server such as a self-hosted MinIO. No paid service needed.",
+        "Restore checks each file against the SHA-256 stored with it and refuses paths that would escape the restore folder.",
+        "Found and fixed two failure-handling bugs by running it against broken storage; both have regression tests.",
+        "30 tests, including the S3 backend against a mocked server.",
+      ],
+      stack: ["Python 3.11", "gzip", "SHA-256", "TOML", "S3 API", "pytest"],
+      links: [{ label: "Code", url: "https://github.com/KCarnage1/cloud-backup-tool", primary: true }],
+    },
+    {
+      id: "monitoring", repo: "server-monitoring-dashboard", cat: "web", year: "2026", color: "#4ade80", cover: "MONITOR",
+      shots: [
+        { src: "assets/projects/monitoring-1.jpg", alt: "The dashboard showing alerts, CPU with per-core load, and memory" },
+        { src: "assets/projects/monitoring-2.jpg", alt: "Network and disk activity charts above the disk space bars" }],
+      title: "SERVER MONITORING DASHBOARD", tag: "Python · JavaScript",
+      desc: "Tracks CPU, memory and disk usage on a server and shows it as live charts in the browser. Python collects the data; the front end is plain JavaScript, HTML and CSS drawing to canvas.",
+      highlights: [
+        "Readings stream to the page over Server-Sent Events, and the header says Live, Paused or Stale if readings stop.",
+        "Each metric shows OK, WARN or CRIT as a word as well as a colour, and alerts come first on the page.",
+        "Read-only image filesystems are left out, because they are always full and would raise permanent false alarms.",
+        "Binds to localhost by default, refuses a public address without a token, checks the Host header against DNS rebinding, and sends a strict CSP.",
+        "Charts are drawn on canvas with no libraries, with text summaries for screen readers.",
+        "25 Python tests and 7 JavaScript tests.",
+      ],
+      stack: ["Python", "psutil", "Server-Sent Events", "JavaScript", "Canvas", "HTML", "CSS"],
+      links: [{ label: "Code", url: "https://github.com/KCarnage1/server-monitoring-dashboard", primary: true }],
+    },
+    {
+      id: "library", repo: "library-management-system", cat: "tool", year: "2026", color: "#fb923c", cover: "LIBRARY",
+      shots: [{ src: "assets/projects/library-1.jpg", alt: "Terminal output: listing books, borrowing, a refused second copy, an invalid ISBN and a return" }],
+      title: "LIBRARY MANAGEMENT SYSTEM", tag: "Java · C++",
+      desc: "Command-line desk for books, members and loans, built around object-oriented design with file-based storage. The core rules were also rewritten in C++ to compare structure and memory handling.",
+      highlights: [
+        "Rules in one class: 14-day loans, 3 books per member, 25 cent a day late fee capped at $10, and overdue books block new loans.",
+        "ISBN-10 and ISBN-13 with check-digit validation.",
+        "Tab-separated storage written to a temp file and moved into place, so a crash can't leave a half-written catalogue.",
+        "The C++20 port uses value types and RAII with no raw new, and runs clean under AddressSanitizer and UBSan.",
+        "11 Java tests and 8 C++ tests share the same scenarios; CI runs both.",
+      ],
+      stack: ["Java 21", "C++20", "CMake", "ASan / UBSan"],
+      links: [{ label: "Code", url: "https://github.com/KCarnage1/library-management-system", primary: true }],
+    },
   ],
 
   hiddenRepos: ["KCarnage1"],   // repos never shown in the live feed (profile README etc.)
@@ -122,22 +181,22 @@ const Model = {
     { group: "Languages", blurb: "What I write code in.", items: [
       { name: "Python", short: "Python", v: 75, uses: ["backup-tool", "monitoring"] },
       { name: "Java", short: "Java", v: 70, uses: ["task-manager", "library"] },
-      { name: "JavaScript", short: "JS", v: 72, uses: ["fnaz", "portfolio", "monitoring"] },
+      { name: "JavaScript", short: "JS", v: 72, uses: ["fnaz", "portfolio", "monitoring", "task-manager"] },
       { name: "TypeScript", short: "TS", v: 58, uses: ["jiran-connect"] },
-      { name: "HTML · CSS", short: "HTML/CSS", v: 78, uses: ["portfolio", "jiran-connect", "task-manager"] },
+      { name: "HTML · CSS", short: "HTML/CSS", v: 78, uses: ["portfolio", "jiran-connect", "task-manager", "monitoring"] },
       { name: "C++", short: "C++", v: 60, uses: ["library"] }] },
     { group: "Cloud & Systems", blurb: "Where the code runs and how it gets there.", items: [
-      { name: "Git & GitHub", short: "Git", v: 78, uses: ["jiran-connect", "fnaz", "ultraniko", "portfolio"] },
-      { name: "Linux Command Line", short: "Linux", v: 65, uses: [] },
+      { name: "Git & GitHub", short: "Git", v: 78, uses: ["jiran-connect", "fnaz", "ultraniko", "portfolio", "task-manager", "backup-tool", "monitoring", "library"] },
+      { name: "Linux Command Line", short: "Linux", v: 65, uses: ["backup-tool", "monitoring", "task-manager"] },
       { name: "Cloud Virtual Machines", short: "VMs", v: 62, uses: ["task-manager"] },
       { name: "Cloud Storage", short: "Storage", v: 58, uses: ["backup-tool"] },
       { name: "Supabase · PostgreSQL", short: "Postgres", v: 55, uses: ["jiran-connect"] },
-      { name: "Networking Basics", short: "Network", v: 50, uses: ["fnaz"] }] },
+      { name: "Networking Basics", short: "Network", v: 50, uses: ["fnaz", "monitoring"] }] },
     { group: "Building", blurb: "The kinds of things I make.", items: [
-      { name: "Full-Stack Web Apps", short: "Full-stack", v: 70, uses: ["jiran-connect", "task-manager"] },
+      { name: "Full-Stack Web Apps", short: "Full-stack", v: 70, uses: ["jiran-connect", "task-manager", "monitoring"] },
       { name: "React · Next.js", short: "React", v: 58, uses: ["jiran-connect"] },
       { name: "Desktop Apps (Electron)", short: "Desktop", v: 60, uses: ["fnaz"] },
-      { name: "Backend Systems", short: "Backend", v: 62, uses: ["task-manager"] },
+      { name: "Backend Systems", short: "Backend", v: 62, uses: ["task-manager", "monitoring"] },
       { name: "Automation & Scripting", short: "Scripts", v: 70, uses: ["backup-tool"] },
       { name: "Game Modding", short: "Modding", v: 55, uses: ["ultraniko"] }] },
   ],
@@ -151,7 +210,7 @@ const Model = {
     ] },
     { h: "What I've built", items: [
       "Lately I've been shipping bigger things: **Jiran Connect,** a bilingual community platform built with Next.js and Supabase, and **Five Nights at Zayed's,** a desktop horror game with online multiplayer over WebRTC.",
-      "Before that came a **cloud-hosted task manager** (HTML, CSS, JavaScript and a Java backend on a cloud virtual machine), an **automated cloud backup tool** in Python, a **server monitoring dashboard** with live charts, and a **library management system** in Java that I rewrote in C++ to compare the two. Setting up the server for the task manager taught me more than the coding did.",
+      "Alongside those are four smaller systems, each with its own repo and tests: a **cloud task manager** with a Java backend, an **automated backup tool** in Python, a **server monitoring dashboard** with live charts, and a **library management system** in Java that I rewrote in C++ to compare the two. Building the backup tool taught me to test against broken storage, because that's where the bugs were.",
     ] },
     { h: "How I work", items: [
       "I'd say **problem-solving and consistency** are my strongest qualities. When something breaks, I'd rather find the real cause than patch over it, even if that takes longer.",

@@ -10,6 +10,7 @@ const Controller = {
   init() {
     View.init();
     this.sound = Model.pref("sound", true); View.setSound(this.sound);
+    Music.init();
     Model.state.motion = Model.pref("motion", true); View.setMotion(Model.state.motion);
     this.bindMenu(); this.bindKeyboard(); this.bindAudio(); this.bindContactForm(); this.bindProjects();
     this.bindOverlays(); this.bindScroll(); this.bindPalette(); this.bindSkills();
@@ -172,15 +173,22 @@ const Controller = {
 
   bindSkills() {
     const body = View.els.skillsBody;
+    const wide = matchMedia("(min-width: 901px)");
     body.addEventListener("click", e => {
       const proj = e.target.closest("[data-project]"); if (proj) { this.showProject(+proj.dataset.project); return; }
       const tab = e.target.closest("[data-group]"); if (tab) { this.selectGroup(+tab.dataset.group); return; }
-      const sk = e.target.closest("[data-si]"); if (sk) this.selectSkill(+sk.dataset.si);
+      const sk = e.target.closest("[data-si]");
+      if (!sk) return;
+      this.selectSkill(+sk.dataset.si);
+      // stacked layout: the detail sits above the list, so bring it into view
+      if (!wide.matches) document.getElementById("sk-detail").scrollIntoView({ block: "nearest", behavior: View.reduced ? "auto" : "smooth" });
     });
-    // hovering a row or a chart label previews it, like moving a cursor through a game menu
+    // Hovering previews a skill like moving a cursor through a game menu. Only in the wide layout: stacked, the detail sits above
+    // the list, so a change in its height would shift the row out from under the pointer and flip the selection back and forth.
     body.addEventListener("pointerover", e => {
       if (e.pointerType !== "mouse") return;
-      const sk = e.target.closest(".sk-item, #sk-radar [data-si]"); if (sk) this.selectSkill(+sk.dataset.si);
+      const sk = e.target.closest(".sk-item, #sk-radar [data-si]");
+      if (sk && (wide.matches || !sk.matches(".sk-item"))) this.selectSkill(+sk.dataset.si);
     });
     body.addEventListener("keydown", e => {
       if (e.target.closest(".sk-groups") && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
@@ -211,7 +219,9 @@ const Controller = {
       { label: "Download CV (PDF)", kind: "File", keys: "resume", run: () => { const a = document.createElement("a"); a.href = "assets/resume/Resume.pdf"; a.download = "Resume.pdf"; a.click(); } },
       { label: "GitHub profile", kind: "Opens new tab", run: () => open("https://github.com/" + Model.githubUser, "_blank", "noopener") },
       { label: "Send me a message", kind: "Contact", keys: "email form", run: () => this.go("contact", true, () => document.querySelector("#contact-form [name=name]").focus()) },
-      { label: () => (this.sound ? "Turn sound off" : "Turn sound on"), kind: "Setting", keys: "audio mute", run: () => this.toggleSound() },
+      { label: () => (Music.playing ? "Pause music" : "Play music"), kind: "Music", keys: "beneath the mask song audio", run: () => Music.toggle() },
+      { label: "Open music player", kind: "Music", keys: "volume seek", run: () => Music.toggleOpen(true) },
+      { label: () => (this.sound ? "Turn sound effects off" : "Turn sound effects on"), kind: "Setting", keys: "audio mute clicks", run: () => this.toggleSound() },
       { label: () => (Model.state.motion ? "Pause background animation" : "Play background animation"), kind: "Setting", keys: "motion", run: () => this.toggleMotion() },
       { label: "Keyboard controls", kind: "Help", keys: "shortcuts", run: () => this.openHelp() },
     ];
@@ -284,7 +294,7 @@ const Controller = {
   play() { if (this.audioUnlocked && this.sound) View.playSelect(); },
   toggleSound() {
     this.sound = !this.sound; Model.setPref("sound", this.sound); View.setSound(this.sound);
-    View.toast(this.sound ? "Sound on" : "Sound off"); this.play();
+    View.toast(this.sound ? "Sound effects on" : "Sound effects off"); this.play();
   },
   toggleMotion() {
     Model.state.motion = !Model.state.motion; Model.setPref("motion", Model.state.motion); View.setMotion(Model.state.motion);
@@ -324,6 +334,8 @@ const Controller = {
       if (k === "/") { e.preventDefault(); this.openPalette(); return; }
       if (k === "?") { this.openHelp(); return; }
       if (k === "m" || k === "M") { this.toggleSound(); return; }
+      if (k === "p" || k === "P") { Music.toggle(); return; }
+      if (k === "Escape" && Music.open) { Music.toggleOpen(false); return; }
       if (k === "b" || k === "B") { this.toggleMotion(); return; }
       if (k >= "1" && k <= "4") { this.go(Model.sections[+k - 1]); return; }
 

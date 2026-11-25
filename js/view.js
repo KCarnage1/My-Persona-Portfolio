@@ -170,7 +170,7 @@ const View = {
     if (!p.shots || !p.shots.length) return this.cover(p, n, label);
     const [first] = p.shots;
     return `<div class="gallery"><figure class="shot"><img src="${this.esc(first.src)}" alt="${this.esc(first.alt)}" width="1280" height="720" decoding="async">
-      <span class="cover-cat">${this.esc(label)}</span><figcaption>${this.esc(first.alt)}</figcaption></figure>
+      <figcaption>${this.esc(first.alt)}</figcaption></figure>
       ${p.shots.length > 1 ? `<div class="thumbs" role="group" aria-label="Screenshots">${p.shots.map((sh, i) => `<button class="thumb-btn" data-shot="${i}" aria-pressed="${i === 0}"><img src="${this.esc(sh.src)}" alt="" width="1280" height="720" loading="lazy" decoding="async"><span class="sr-only">Show screenshot ${i + 1}: ${this.esc(sh.alt)}</span></button>`).join("")}</div>` : ""}</div>`;
   },
   showShot(btn, p) {
@@ -212,7 +212,7 @@ const View = {
     };
     const main = list.map((p, i) => [p, i]).filter(([p]) => p.cat !== "small"), small = list.map((p, i) => [p, i]).filter(([p]) => p.cat === "small");
     document.getElementById("pj-list").innerHTML =
-      `<h3 class="pj-group" data-group="main">Featured <span class="count" id="feat-count">${main.length}</span></h3><ul>${main.map(([p, i]) => row(p, i)).join("")}</ul>` +
+      `<h3 class="pj-group" data-group="main">Projects <span class="count" id="feat-count">${main.length}</span></h3><ul>${main.map(([p, i]) => row(p, i)).join("")}</ul>` +
       `<h3 class="pj-group" data-group="small">Smaller builds</h3><ul>${small.map(([p, i]) => row(p, i)).join("")}</ul>`;
   },
 

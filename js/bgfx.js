@@ -49,7 +49,8 @@
       const x = W * .74 - sx * 40, y = H * .23 - sy * 30, r = m * .13;
       const f = ((((Date.now() - Date.UTC(2000, 0, 6, 18, 14)) / 864e5) % 29.530589) + 29.530589) % 29.530589 / 29.530589;
       const off = f < .5 ? -r * 2.1 * (f / .5) : r * 2.1 * (1 - (f - .5) / .5);
-      glow(x, y, r * 3.2, "120,220,255", .4); disc(x, y, r, "#d8f6ff"); if (Math.abs(off) < r * 2.05) disc(x + off, y, r * 1.02, "#05235e");
+      glow(x, y, r * 3.2, "120,220,255", .4); disc(x, y, r, "#d8f6ff");
+      if (Math.abs(off) < r * 2.05) { ctx.save(); ctx.beginPath(); ctx.arc(x, y, r + .5, 0, TAU); ctx.clip(); disc(x + off, y, r * 1.02, "rgba(4,24,70,.94)"); ctx.restore(); }
       ring(W * .28 - sx * 70, H * .62 - sy * 50, m * .62, t / 60000, "160,235,255", 12);
       drawShards("120,215,255", "220,250,255");
     },

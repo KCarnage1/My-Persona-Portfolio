@@ -6,8 +6,16 @@
 <title>Portfolio · Cloud Engineering / IT</title>
 <meta name="description" content="Portfolio of an IT undergraduate focused on software development and cloud engineering: web apps, a desktop game, a game mod, skills and contact.">
 <meta name="theme-color" content="#e60012">
+<link rel="canonical" href="https://kcarnage1.github.io/My-Persona-Portfolio/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kcarnage1.github.io/My-Persona-Portfolio/">
 <meta property="og:title" content="Portfolio · Cloud Engineering / IT">
-<meta property="og:description" content="Full-stack, cloud and game projects, skills and contact.">
+<meta property="og:description" content="Web apps, a desktop game, a game mod and cloud tools, with source code and screenshots for each.">
+<meta property="og:image" content="https://kcarnage1.github.io/My-Persona-Portfolio/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The portfolio's Persona-style main menu with the words CLOUD and IT in cut-out lettering">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23e60012'/%3E%3Cpolygon points='50,8 60,38 92,38 66,57 76,88 50,70 24,88 34,57 8,38 40,38' fill='%23000'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +42,7 @@
 
 <div id="shell">
   <header id="hud-top">
-    <button class="hud-tag" data-nav="home" aria-label="Back to the main menu">KC <i>//</i> <span class="tag-long">Cloud Engineering / IT</span></button>
+    <button class="hud-tag" data-nav="home">KC <i>//</i> <span class="tag-long">Cloud Engineering / IT</span><span class="sr-only"> (back to the main menu)</span></button>
     <nav id="tabs" aria-label="Sections">
       <span class="tab-key" aria-hidden="true">Q</span>
       <button class="tab" data-nav="projects">Projects</button>
@@ -44,9 +52,10 @@
       <span class="tab-key" aria-hidden="true">E</span>
     </nav>
     <div class="hud-actions">
+      <button class="icon-btn" id="music-btn" aria-expanded="false" aria-controls="player" title="Music (P plays or pauses)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg><span class="sr-only">Music player</span></button>
       <button class="icon-btn" id="palette-btn" title="Quick jump (/)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l5.5 5.5"/></svg><span class="sr-only">Quick jump</span></button>
       <button class="icon-btn" id="motion-toggle" aria-pressed="true" title="Background animation (B)"><svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5h3v14H8zM13 5h3v14h-3z"/></svg><svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg><span class="sr-only">Background animation</span></button>
-      <button class="icon-btn" id="sound-toggle" aria-pressed="true" title="Sound (M)"><svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12"/></svg><svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 9l5 6M21 9l-5 6"/></svg><span class="sr-only">Sound</span></button>
+      <button class="icon-btn" id="sound-toggle" aria-pressed="true" title="Sound effects (M)"><svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12"/></svg><svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 9l5 6M21 9l-5 6"/></svg><span class="sr-only">Sound effects</span></button>
       <button class="icon-btn" id="help-btn" title="Keyboard controls (?)"><span aria-hidden="true">?</span><span class="sr-only">Keyboard controls</span></button>
     </div>
     <div id="progress" aria-hidden="true"></div>
@@ -146,6 +155,24 @@
   </footer>
 </div>
 
+<section id="player" aria-label="Music player" hidden>
+  <p class="mp-kicker">Now playing</p>
+  <h2 class="mp-title" id="mp-title">Beneath the Mask</h2>
+  <p class="mp-credit">Persona 5 soundtrack</p>
+  <canvas id="mp-viz" width="320" height="56" aria-hidden="true"></canvas>
+  <div class="mp-seek">
+    <input type="range" id="mp-seek" min="0" max="1000" value="0" aria-label="Seek">
+    <p class="mp-time"><span id="mp-cur">0:00</span><span id="mp-dur">0:00</span></p>
+  </div>
+  <div class="mp-row">
+    <button type="button" id="mp-play" class="mp-main" aria-label="Play"><svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg><svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg></button>
+    <button type="button" id="mp-loop" aria-pressed="true" title="Repeat">Repeat</button>
+    <label class="mp-vol"><span class="sr-only">Volume</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 8.5a5 5 0 010 7"/></svg><input type="range" id="mp-vol" min="0" max="100" value="60"></label>
+  </div>
+  <p class="mp-status" id="mp-status" role="status"></p>
+  <audio id="music" src="assets/music/beneath-the-mask.mp3" preload="none" loop></audio>
+</section>
+
 <button id="to-top"><span aria-hidden="true">▲</span><span class="sr-only">Back to top</span></button>
 
 <div id="modal" class="overlay" hidden>
@@ -179,7 +206,8 @@
       <dt><span class="key">/</span></dt><dd>Quick jump to any section, project or action</dd>
       <dt><span class="key">Esc</span></dt><dd>Close a window, or go back to the menu</dd>
       <dt><span class="key">←</span><span class="key">→</span></dt><dd>Previous / next project while one is open</dd>
-      <dt><span class="key">M</span></dt><dd>Sound on / off</dd>
+      <dt><span class="key">P</span></dt><dd>Play or pause the music</dd>
+      <dt><span class="key">M</span></dt><dd>Sound effects on / off</dd>
       <dt><span class="key">B</span></dt><dd>Pause / play the animated background</dd>
     </dl>
     <button class="cv-btn" data-close><span>Close</span></button>
@@ -193,6 +221,7 @@
 <script src="js/bgfx.js" defer></script>
 <script src="js/model.js" defer></script>
 <script src="js/view.js" defer></script>
+<script src="js/music.js" defer></script>
 <script src="js/controller.js" defer></script>
 </body>
 </html>

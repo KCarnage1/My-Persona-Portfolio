@@ -15,7 +15,7 @@
   const cards = Array.from({ length: 14 }, (_, i) => ({ p: R() * TAU, r: .25 + R() * .75, dir: i % 2 ? 1 : -1, w: .6 + R() * .6 }));
   const glints = Array.from({ length: 16 }, () => ({ x: R(), y: R(), s: 8 + R() * 16, p: R() * 9, v: .0004 + R() * .0006 }));
 
-  const resize = () => { let k = Math.min(devicePixelRatio || 1, 1.5); const px = innerWidth * innerHeight * k * k; if (px > 2.2e6) k *= Math.sqrt(2.2e6 / px);   // keep the pixel count sane on big or hi-dpi screens
+  const resize = () => { let k = Math.min(devicePixelRatio || 1, 1.5); const px = innerWidth * innerHeight * k * k; if (px > 1.3e6) k *= Math.sqrt(1.3e6 / px);   // keep the pixel count sane on big or hi-dpi screens
     W = c.width = Math.round(innerWidth * k); H = c.height = Math.round(innerHeight * k); m = Math.min(W, H); };
   addEventListener("resize", resize); resize();
   addEventListener("mousemove", e => { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; }, { passive: true });
@@ -25,17 +25,28 @@
   new MutationObserver(redrawStill).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
   /* ---------- drawing helpers ---------- */
-  const fill = stops => { const g = ctx.createLinearGradient(0, 0, 0, H); stops.forEach((s, i) => g.addColorStop(i / (stops.length - 1), s)); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
-  const diag = stops => { const g = ctx.createLinearGradient(0, 0, W, H); stops.forEach((s, i) => g.addColorStop(i / (stops.length - 1), s)); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
+  // Static gradients are painted once into an offscreen canvas and then blitted, which is far cheaper than rebuilding a
+  // gradient every frame and avoids the garbage that causes small stutters.
+  const layers = new Map();
+  const cached = (key, paint) => {
+    key += "|" + W + "x" + H; let l = layers.get(key);
+    if (!l) { if (layers.size > 24) layers.clear(); l = document.createElement("canvas"); l.width = W; l.height = H; paint(l.getContext("2d")); layers.set(key, l); }
+    ctx.drawImage(l, 0, 0);
+  };
+  const lin = (g, x1, y1, x2, y2, stops) => { const gr = g.createLinearGradient(x1, y1, x2, y2); stops.forEach((st, i) => gr.addColorStop(i / (stops.length - 1), st)); g.fillStyle = gr; g.fillRect(0, 0, W, H); };
+  const fill = stops => cached("v" + stops, g => lin(g, 0, 0, 0, H, stops));
+  const diag = stops => cached("d" + stops, g => lin(g, 0, 0, W, H, stops));
   const glow = (x, y, r, rgb, a) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); };
   const disc = (x, y, r, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); };
   function drawShards(rgb, line) {
+    ctx.fillStyle = `rgb(${rgb})`; ctx.strokeStyle = `rgb(${line})`; ctx.lineWidth = 1;
     shards.forEach(s => {
       s.y -= s.v * 16 * f; s.x += s.v * 6 * f; s.r += s.vr * f; if (s.y < -.1) { s.y = 1.1; s.x = R(); } if (s.x > 1.1) s.x = -.1;
-      ctx.save(); ctx.translate(s.x * W - sx * 90 * s.d, s.y * H - sy * 60 * s.d); ctx.rotate(s.r);
-      ctx.fillStyle = `rgba(${rgb},${s.a})`; ctx.strokeStyle = `rgba(${line},${s.a + .2})`; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(-s.s, -s.s * .3); ctx.lineTo(s.s * .2, -s.s * .8); ctx.lineTo(s.s, s.s * .4); ctx.lineTo(-s.s * .4, s.s * .7); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+      ctx.setTransform(Math.cos(s.r), Math.sin(s.r), -Math.sin(s.r), Math.cos(s.r), s.x * W - sx * 90 * s.d, s.y * H - sy * 60 * s.d);
+      ctx.beginPath(); ctx.moveTo(-s.s, -s.s * .3); ctx.lineTo(s.s * .2, -s.s * .8); ctx.lineTo(s.s, s.s * .4); ctx.lineTo(-s.s * .4, s.s * .7); ctx.closePath();
+      ctx.globalAlpha = s.a; ctx.fill(); ctx.globalAlpha = Math.min(1, s.a + .2); ctx.stroke();
     });
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
   }
   function ring(cx, cy, r, rot, rgb, ticks) {
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.strokeStyle = `rgba(${rgb},.3)`; ctx.lineWidth = 2;
@@ -54,7 +65,9 @@
     ctx.beginPath(); ctx.moveTo(x, y - s); ctx.quadraticCurveTo(x, y, x + s * .5, y); ctx.quadraticCurveTo(x, y, x, y + s); ctx.quadraticCurveTo(x, y, x - s * .5, y); ctx.quadraticCurveTo(x, y, x, y - s); ctx.closePath();
   }
   function drawGlints(t, rgb) {
-    glints.forEach(g => { const k = (Math.sin(t * g.v + g.p) + 1) / 2; ctx.fillStyle = `rgba(${rgb},${.15 + k * .75})`; glint(g.x * W - sx * 50, g.y * H - sy * 35, g.s * (.5 + k)); ctx.fill(); });
+    ctx.fillStyle = `rgb(${rgb})`;
+    glints.forEach(g => { const k = (Math.sin(t * g.v + g.p) + 1) / 2; ctx.globalAlpha = .15 + k * .75; glint(g.x * W - sx * 50, g.y * H - sy * 35, g.s * (.5 + k)); ctx.fill(); });
+    ctx.globalAlpha = 1;
   }
   // a tilted strip of repeating text that scrolls sideways
   function band(y, tilt, bg, fg, text, scroll) {
@@ -104,8 +117,10 @@
       const a0 = rot + i * TAU / n, a1 = a0 + TAU / n;
       ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a0) * far, cy + Math.sin(a0) * far); ctx.lineTo(cx + Math.cos(a1) * far, cy + Math.sin(a1) * far); ctx.closePath(); ctx.fill();
     }
-    const v = ctx.createRadialGradient(cx, cy, m * .12, cx, cy, far * .7); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, vignette);
-    ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+    cached("vg" + vignette, g => {   // a fixed vignette, so it can be painted once
+      const vx = W * .7, vy = H * .5, v = g.createRadialGradient(vx, vy, m * .12, vx, vy, far * .7); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, vignette);
+      g.fillStyle = v; g.fillRect(0, 0, W, H);
+    });
   }
 
   /* ---------- Persona 5 and Persona 5 Royal: one set of scenes, two palettes ---------- */

@@ -155,6 +155,8 @@ const View = {
     const b = document.getElementById("theme-btn");
     if (b) { b.firstElementChild.textContent = t.short; b.lastElementChild.textContent = "Switch theme. Current: " + t.name; }
     const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t.color;
+    if (!this.cursorsLoaded) { this.cursorsLoaded = true; ["p5r", "p3r"].forEach(n => ["normal", "link"].forEach(k => { new Image().src = `assets/cursors/${n}-${k}.png`; })); }
+    this.refreshCursor && this.refreshCursor();
     window.Music && Music.draw && Music.draw();
   },
   setMotion(on) { this.els.motionBtn.setAttribute("aria-pressed", on); window.BGFX && window.BGFX.setPaused(!on); },
@@ -472,12 +474,14 @@ const View = {
     const ring = document.createElement("i"); ring.className = "c-ring"; layer.appendChild(ring);
     for (let i = 0; i < N; i++) { const d = document.createElement("i"); d.className = "c-dot" + (i % 3 === 1 ? " alt" : ""); layer.appendChild(d); trail.push({ el: d, x: -100, y: -100 }); }
     document.body.appendChild(layer);
-    let x = -100, y = -100, px = -100, py = -100, frame = 0, acc = 0, vis = false, link = false, speed = 0, lastT = 0;
+    let x = -100, y = -100, px = -100, py = -100, frame = 0, acc = 0, vis = false, link = false, speed = 0, lastT = 0, hx = 6, hy = 4;
+    const hotspot = () => { const cs = getComputedStyle(cur); hx = parseFloat(cs.getPropertyValue("--hx")) || 6; hy = parseFloat(cs.getPropertyValue("--hy")) || 4; };
+    this.refreshCursor = () => requestAnimationFrame(hotspot);
     addEventListener("mousemove", e => {
       x = e.clientX; y = e.clientY;
       if (!vis) { px = x; py = y; trail.forEach(t => { t.x = x; t.y = y; }); cur.style.display = "block"; layer.style.display = "block"; vis = true; }
       link = !!e.target.closest?.("a,button,.card.clickable,.menu-item,input,textarea,[data-close],#palette-list li,.pj-item,.sk-row");
-      cur.classList.toggle("link", link); ring.classList.toggle("open", link);
+      if (link !== cur.classList.contains("link")) { cur.classList.toggle("link", link); ring.classList.toggle("open", link); hotspot(); }
     }, { passive: true });
     document.documentElement.addEventListener("mouseleave", () => { cur.style.display = "none"; layer.style.display = "none"; vis = false; });
     addEventListener("pointerdown", e => {
@@ -500,7 +504,7 @@ const View = {
         const k = 1 - Math.exp(-dt / 28);               // the sprite eases after the pointer
         const ox = px, oy = py; px += (x - px) * k; py += (y - py) * k;
         speed += (Math.hypot(px - ox, py - oy) / Math.max(dt, 1) * 16 - speed) * (1 - Math.exp(-dt / 90));
-        cur.style.transform = `translate3d(${px - 6}px,${py - 4}px,0)`;
+        cur.style.transform = `translate3d(${px - hx}px,${py - hy}px,0)`;
         ring.style.transform = `translate3d(${px}px,${py}px,0) translate(-50%,-50%)`;
         let tx = px, ty = py;
         trail.forEach((t, i) => {                       // each dot chases the one in front, so they stream out behind a fast cursor

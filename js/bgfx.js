@@ -1,5 +1,5 @@
-/* BGFX: animated Persona-3-style wallpapers, one scene per screen, drawn on a canvas (no video files).
-   home: moon + clock ring · projects: Dark Hour · skills: Velvet Room · about: dusk city · contact: rainy night */
+/* BGFX: animated Persona-style wallpapers, one scene per screen, drawn on a canvas (no video files).
+   home: moon + clock ring · projects: Dark Hour · skills: Velvet Room · about: red and black slashes + star · contact: red rays + banners */
 (() => {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches, R = Math.random, TAU = Math.PI * 2;
   const bg = document.getElementById("bg"), c = document.createElement("canvas"), ctx = c.getContext("2d");
@@ -10,13 +10,6 @@
   const shards = Array.from({ length: 46 }, () => ({ x: R(), y: R(), s: 8 + R() * 38, r: R() * TAU, vr: (R() - .5) * .006, v: .00006 + R() * .00022, d: .3 + R() * 1.1, a: .12 + R() * .35 }));
   const coffins = Array.from({ length: 16 }, () => ({ x: R(), y: R(), s: m || 90 + R() * 90, r: (R() - .5) * .5, v: .00004 + R() * .00009, d: .3 + R() * 1.2, p: R() * 9 }));
   const cards = Array.from({ length: 14 }, (_, i) => ({ p: R() * TAU, r: .25 + R() * .75, dir: i % 2 ? 1 : -1, w: .6 + R() * .6 }));
-  const rain = Array.from({ length: 260 }, () => ({ x: R(), y: R(), l: .03 + R() * .06, v: .6 + R() }));
-  const clouds = Array.from({ length: 8 }, () => ({ x: R(), y: .08 + R() * .35, s: .06 + R() * .1, v: .00001 + R() * .00003 }));
-  const gulls = Array.from({ length: 5 }, () => ({ x: R(), y: .15 + R() * .3, s: 8 + R() * 10, v: .00004 + R() * .00005, p: R() * 9 }));
-  const skyline = [["#27428c", .00002, .22], ["#162a62", .00005, .32], ["#091536", .0001, .42]].map(([col, sp, mh]) => {
-    let x = 0; const b = []; while (x < 1.5) { const w = .02 + R() * .05; b.push({ x, w, h: .06 + R() * mh }); x += w + R() * .01; }
-    return { col, sp, b };
-  });
 
   const resize = () => { const k = Math.min(devicePixelRatio || 1, 1.5); W = c.width = innerWidth * k; H = c.height = innerHeight * k; m = Math.min(W, H); };
   addEventListener("resize", resize); resize();
@@ -34,6 +27,22 @@
       ctx.fillStyle = `rgba(${rgb},${s.a})`; ctx.strokeStyle = `rgba(${line},${s.a + .2})`; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(-s.s, -s.s * .3); ctx.lineTo(s.s * .2, -s.s * .8); ctx.lineTo(s.s, s.s * .4); ctx.lineTo(-s.s * .4, s.s * .7); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
     });
+  }
+  // five-pointed star, the Phantom Thieves' mark
+  function star(cx, cy, r, rot) {
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) { const a = rot + i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? r * .382 : r; ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
+    ctx.closePath();
+  }
+  // a tilted strip of repeating text that scrolls sideways
+  function band(y, tilt, bg, fg, text, scroll) {
+    const h = m * .075;
+    ctx.save(); ctx.translate(W / 2, y); ctx.rotate(tilt);
+    ctx.fillStyle = bg; ctx.fillRect(-W, -h / 2, W * 2, h);
+    ctx.fillStyle = fg; ctx.font = `400 ${h * .72}px Anton, Impact, sans-serif`; ctx.textBaseline = "middle";
+    const unit = ctx.measureText(text).width, off = ((scroll % unit) + unit) % unit;
+    for (let x = -W - off; x < W; x += unit) ctx.fillText(text, x, 2);
+    ctx.restore();
   }
   function ring(cx, cy, r, rot, rgb, ticks) {
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.strokeStyle = `rgba(${rgb},.3)`; ctx.lineWidth = 2;
@@ -79,22 +88,35 @@
       });
       drawShards("150,130,255", "225,215,255");
     },
-    about(t) {      // dusk over the bay city
-      fill(["#0a2a78", "#3a6fd0", "#ff9966", "#ffd9a0"]);
-      const sxp = W * .35 - sx * 30, syp = H * .7 - sy * 20; glow(sxp, syp, m * .7, "255,170,90", .55); disc(sxp, syp, m * .1, "#fff1c9");
-      clouds.forEach(k => { k.x += k.v * 16; if (k.x > 1.3) k.x = -.3; for (let i = 0; i < 4; i++) { ctx.fillStyle = "rgba(255,225,215,.35)"; ctx.beginPath(); ctx.ellipse(k.x * W + i * k.s * m * .5 - sx * 30, k.y * H, k.s * m * .5, k.s * m * .18, 0, 0, TAU); ctx.fill(); } });
-      gulls.forEach(g => { g.x += g.v * 16; if (g.x > 1.1) g.x = -.1; const f = Math.sin(t / 220 + g.p) * g.s * .5; ctx.strokeStyle = "rgba(20,30,70,.8)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(g.x * W - g.s, g.y * H + f); ctx.quadraticCurveTo(g.x * W - g.s / 2, g.y * H - g.s * .4, g.x * W, g.y * H); ctx.quadraticCurveTo(g.x * W + g.s / 2, g.y * H - g.s * .4, g.x * W + g.s, g.y * H + f); ctx.stroke(); });
-      skyline.forEach((L, i) => { ctx.fillStyle = L.col; L.b.forEach(b => { const x = (((b.x - t * L.sp) % 1.5) + 1.5) % 1.5 - .25; ctx.fillRect(x * W - sx * (20 + i * 20), H - b.h * H, b.w * W, b.h * H); }); });
+    about(t) {      // red and black slashes with a turning star
+      const g = ctx.createLinearGradient(0, 0, W, H); g.addColorStop(0, "#050002"); g.addColorStop(.5, "#1c0005"); g.addColorStop(1, "#4a0008");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      const lean = H * .55;
+      for (let i = 0; i < 5; i++) {
+        const off = Math.sin(t / 9000 + i * 1.9) * W * .02 - sx * 40 * (1 + i * .25), x0 = W * (i * .24 - .1) + off, w = W * (.07 + (i % 3) * .05);
+        ctx.fillStyle = i % 2 ? "#e60012" : "#a8000e";
+        ctx.beginPath(); ctx.moveTo(x0 + lean, 0); ctx.lineTo(x0 + lean + w, 0); ctx.lineTo(x0 + w, H); ctx.lineTo(x0, H); ctx.closePath(); ctx.fill();
+      }
+      ctx.fillStyle = "rgba(255,255,255,.9)";
+      for (let i = 0; i < 2; i++) { const x0 = W * (.18 + i * .5) - sx * 60 + Math.sin(t / 7000 + i) * W * .015; ctx.beginPath(); ctx.moveTo(x0 + lean, 0); ctx.lineTo(x0 + lean + 5, 0); ctx.lineTo(x0 + 5, H); ctx.lineTo(x0, H); ctx.closePath(); ctx.fill(); }
+      const cx = W * .8 - sx * 70, cy = H * .72 - sy * 50;
+      star(cx, cy, m * .46, t / 20000); ctx.fillStyle = "#000"; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = "#fff"; ctx.stroke();
+      star(cx, cy, m * .26, -t / 14000); ctx.fillStyle = "#e60012"; ctx.fill();
+      drawShards("255,255,255", "255,255,255");
     },
-    contact(t) {    // rainy night street
-      fill(["#010207", "#0b1020", "#1a1f2e"]);
-      const lx = W * .82 - sx * 30, ly = H * .3 - sy * 20, fl = .55 + .08 * Math.sin(t / 130) - (Math.sin(t / 3100) > .985 ? .3 : 0);
-      glow(lx, ly, m * .55, "255,190,60", fl); disc(lx, ly, m * .012, "#fff3c4");
-      const g = ctx.createLinearGradient(0, H * .6, 0, H); g.addColorStop(0, "rgba(255,190,60,.25)"); g.addColorStop(1, "rgba(255,190,60,0)");
-      ctx.fillStyle = g; ctx.fillRect(lx - m * .02 + Math.sin(t / 400) * 3, H * .6, m * .04, H * .4);
-      ctx.strokeStyle = "rgba(200,220,255,.32)"; ctx.lineWidth = 1.5; ctx.beginPath();
-      rain.forEach(d => { d.y += d.v * .018; d.x -= d.v * .003; if (d.y > 1.05) { d.y = -.1; d.x = R() * 1.1; } if (d.x < -.1) d.x = 1.1; ctx.moveTo(d.x * W, d.y * H); ctx.lineTo(d.x * W - d.l * W * .12, (d.y + d.l) * H); });
-      ctx.stroke();
+    contact(t) {    // red rays bursting from behind the card, with scrolling banners
+      fill(["#000", "#12000a", "#000"]);
+      const cx = W * .7 - sx * 50, cy = H * .5 - sy * 30, far = Math.hypot(W, H), n = 26, rot = t / 45000;
+      ctx.fillStyle = "#c70012";
+      for (let i = 0; i < n; i += 2) {
+        const a0 = rot + i * TAU / n, a1 = a0 + TAU / n;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a0) * far, cy + Math.sin(a0) * far); ctx.lineTo(cx + Math.cos(a1) * far, cy + Math.sin(a1) * far); ctx.closePath(); ctx.fill();
+      }
+      const v = ctx.createRadialGradient(cx, cy, m * .12, cx, cy, far * .7); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.88)");
+      ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+      band(H * .76, -.08, "#fff", "#000", "SAY HELLO  //  GET IN TOUCH  //  ", t * .05);
+      band(H * .9, -.05, "#e60012", "#000", "TAKE YOUR TIME  //  ", -t * .04);
+      drawShards("255,255,255", "255,255,255");
     },
   };
 

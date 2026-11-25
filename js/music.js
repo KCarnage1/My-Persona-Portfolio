@@ -133,11 +133,11 @@ const Music = {
         await a.play();
         this.playing = true; this.mutedAuto = true;
         this.say("Playing muted. Click anywhere or press a key to hear it.");
-        View.toast("Music is on. Click anywhere to hear it.");
+        document.body.classList.add("music-pending");
       } catch {
         this.playing = false;
         this.say("Click anywhere or press a key to start the music.");
-        View.toast("Click anywhere to start the music.");
+        document.body.classList.add("music-pending");
       }
     }
     this.sync();
@@ -146,7 +146,9 @@ const Music = {
 
   armUnlock() {
     const unlock = () => {
+      if (navigator.userActivation && !navigator.userActivation.isActive) return;   // the end of a scroll isn't a real interaction
       ["pointerdown", "keydown", "touchend"].forEach(t => removeEventListener(t, unlock, true));
+      document.body.classList.remove("music-pending");
       if (this.mutedAuto) {
         this.mutedAuto = false;
         this.audio.muted = false; this.audio.volume = 0;

@@ -173,7 +173,6 @@ const Music = {
       if (this.mutedAuto) {
         this.mutedAuto = false;
         this.audio.muted = false; this.audio.volume = 0;
-        this.ensureAnalyser();
         if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
         this.fade(this.volume, this.reduced ? 0 : 1.2);
         this.say("");
@@ -205,7 +204,9 @@ const Music = {
   async start(quiet) {
     this.wanted = true; Model.setPref("musicOn", true);
     this.mutedAuto = false; this.audio.muted = false;
-    this.ensureAnalyser();
+    // The analyser (only used for the equalizer) is created when the player is opened, not here: creating an AudioContext can
+    // stall the page for a moment on some systems, and most visitors never open the player.
+    if (this.open) this.ensureAnalyser();
     try {
       if (this.ctx && this.ctx.state === "suspended") await this.ctx.resume();
       this.restorePosition();
@@ -258,6 +259,7 @@ const Music = {
 
   draw() {
     cancelAnimationFrame(this.raf);
+    if (!this.open) return;   // the equalizer is only visible while the player is open
     const c = this.viz, ctx = c.getContext("2d"), w = c.width, h = c.height;
     ctx.clearRect(0, 0, w, h);
     const live = this.open && this.playing && this.an && !this.reduced && !document.hidden;

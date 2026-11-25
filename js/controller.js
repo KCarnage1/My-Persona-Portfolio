@@ -60,11 +60,17 @@ const Controller = {
       Model.state.projectsBuilt = true;
     }
   },
+  // Builds the other screens one at a time while the browser is idle, starting a little after the intro so it never competes with
+  // it. Each step is its own idle callback, so no single step holds the page for long.
   prebuild() {
-    const idle = window.requestIdleCallback ? f => requestIdleCallback(f, { timeout: 1500 }) : f => setTimeout(f, 200);
-    ["about", "skills", "projects"].forEach(name => idle(() => this.build(name)));
-    // warm the project screenshots so the first visit doesn't decode them mid-transition
-    idle(() => Model.projects.forEach(p => (p.shots || []).slice(0, 1).forEach(sh => { const im = new Image(); im.decoding = "async"; im.src = sh.src; im.decode && im.decode().catch(() => {}); })));
+    const steps = ["about", "skills", "projects"];
+    const next = () => {
+      const name = steps.shift(); if (!name) return;
+      this.build(name);
+      schedule();
+    };
+    const schedule = () => { if (steps.length) (window.requestIdleCallback ? requestIdleCallback(next, { timeout: 2500 }) : setTimeout(next, 300)); };
+    setTimeout(schedule, 1200);
   },
 
   enter(screen) {

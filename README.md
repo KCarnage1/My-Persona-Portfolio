@@ -20,6 +20,7 @@ A Persona 5, Persona 5 Royal and Persona 3 Reload-styled (switchable) portfolio 
 - Home, Projects, Skills, About and Contact screens with wipe transitions between them and a quick-jump search.
 - Three looks (Persona 5, Persona 5 Royal, Persona 3 Reload), each with its own colours, lettering and animated background for every screen.
 - A music playlist with a player, volume, seeking and an equalizer. Each look plays its own song (Beneath the Mask for Persona 5, Last Surprise for Royal, Color Your Night for Reload), plus sound effects and a sprite cursor with a trail.
+- The animated wallpaper is drawn in a Web Worker on an OffscreenCanvas, so it stays off the page's main thread (it falls back to the main thread when workers are unavailable, for example when index.html is opened straight from disk).
 - Respects reduced-motion settings, works by keyboard and on a phone, and the animation runs by elapsed time so it feels the same on 60 Hz and 120 Hz+ screens.
 
 ## Run it

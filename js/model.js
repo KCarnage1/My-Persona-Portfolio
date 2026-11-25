@@ -225,9 +225,9 @@ const Model = {
 
   // The playlist. Add a song by dropping the file in assets/music/ and adding a line here.
   themes: [
-    { id: "p5", name: "Persona 5", short: "P5", color: "#e60012" },
-    { id: "p5r", name: "Persona 5 Royal", short: "P5R", color: "#e60012" },
-    { id: "p3r", name: "Persona 3 Reload", short: "P3R", color: "#2160f0" },
+    { id: "p5", name: "Persona 5", short: "P5", color: "#e60012", song: "assets/music/beneath-the-mask.mp3" },
+    { id: "p5r", name: "Persona 5 Royal", short: "P5R", color: "#e60012", song: "assets/music/last-surprise.mp3" },
+    { id: "p3r", name: "Persona 3 Reload", short: "P3R", color: "#2160f0", song: "assets/music/color-your-night.mp3" },
   ],
   music: [
     { title: "Beneath the Mask", artist: "Persona soundtrack", src: "assets/music/beneath-the-mask.mp3" },

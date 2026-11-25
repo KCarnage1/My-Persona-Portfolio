@@ -158,7 +158,8 @@ const View = {
     const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t.color;
     if (!this.cursorsLoaded) { this.cursorsLoaded = true; ["p5r", "p3r"].forEach(n => ["normal", "link"].forEach(k => { new Image().src = `assets/cursors/${n}-${k}.png`; })); }
     this.refreshCursor && this.refreshCursor();
-    window.Music && Music.draw && Music.draw();
+    if (typeof Music !== "undefined") Music.forTheme();
+    if (typeof Music !== "undefined" && Music.viz) Music.draw();
   },
   setMotion(on) { this.els.motionBtn.setAttribute("aria-pressed", on); window.BGFX && window.BGFX.setPaused(!on); },
 

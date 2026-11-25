@@ -28,6 +28,8 @@ const Music = {
     this.wanted = Model.pref("musicOn", true);
     const saved = Model.pref("musicTrack", 0);
     this.index = Number.isInteger(saved) && saved >= 0 && saved < this.tracks.length ? saved : 0;
+    const mine = this.themeTrack();   // each look has its own song; the saved song only matters until the look changes
+    if (mine >= 0) this.index = mine;
 
     this.renderList();
     this.load(this.index);
@@ -99,6 +101,25 @@ const Music = {
     try { sessionStorage.removeItem("pf:musicAt"); } catch {}
     this.load(i);
     this.start(true);
+  },
+
+  // the song that belongs to the current look (-1 if none)
+  themeTrack() {
+    const t = Model.themes.find(x => x.id === (Model.state.theme || "p5"));
+    return t && t.song ? this.tracks.findIndex(x => x.src === t.song) : -1;
+  },
+
+  // Called when the look changes: switch to that look's song. If music was playing it carries on with the new song.
+  forTheme() {
+    if (!this.audio) return;
+    const i = this.themeTrack();
+    if (i < 0 || i === this.index) return;
+    const was = this.playing, muted = this.mutedAuto;
+    Model.setPref("musicTrack", i);
+    try { sessionStorage.removeItem("pf:musicAt"); } catch {}
+    this.load(i);
+    if (!was) return;
+    if (muted) { this.audio.muted = true; this.audio.volume = this.volume; this.audio.play().catch(() => {}); } else this.start(true);
   },
 
   go(delta) { this.select((this.index + delta + this.tracks.length) % this.tracks.length); },

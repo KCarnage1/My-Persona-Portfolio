@@ -10,8 +10,9 @@ const Controller = {
   init() {
     View.init();
     this.sound = Model.pref("sound", true); View.setSound(this.sound);
+    Model.state.theme = Model.pref("theme", "p5");
     Music.init();
-    Model.state.theme = Model.pref("theme", "p5"); View.setTheme(Model.state.theme);
+    View.setTheme(Model.state.theme);
     Model.state.motion = Model.pref("motion", true); View.setMotion(Model.state.motion);
     this.bindMenu(); this.bindKeyboard(); this.bindAudio(); this.bindContactForm(); this.bindProjects();
     this.bindOverlays(); this.bindScroll(); this.bindPalette(); this.bindSkills();

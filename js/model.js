@@ -223,6 +223,14 @@ const Model = {
     ] },
   ],
 
+  // Four traits, each taken from what the About text already says; no scores.
+  traits: [
+    { n: "I", name: "Problem-solving", line: "When something breaks, I'd rather find the real cause than patch over it, even if that takes longer." },
+    { n: "II", name: "Consistency", line: "Most of what I know came from small projects: get stuck, look it up, get it working." },
+    { n: "III", name: "Curiosity", line: "I like knowing what actually happens behind an app, from the code on screen to the server keeping it online." },
+    { n: "IV", name: "Teamwork", line: "Clear communication, and helping others when I can." },
+  ],
+
   /* ---------- preferences (per browser) ---------- */
   pref(key, fallback) { try { const v = localStorage.getItem("pf:" + key); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
   setPref(key, v) { try { localStorage.setItem("pf:" + key, JSON.stringify(v)); } catch {} },

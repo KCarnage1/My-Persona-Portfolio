@@ -414,20 +414,21 @@ const View = {
   rankOf: v => (v >= 80 ? 5 : v >= 70 ? 4 : v >= 60 ? 3 : v >= 50 ? 2 : 1),
 
   /* ---------- about ---------- */
-  renderAbout(chapters) {
-    let first = true;
-    let html = `<figure class="about-photo"><img src="assets/pfp.jpg" width="640" height="722" alt="Black-and-white manga-style illustration used as a profile picture" loading="lazy"><figcaption>PFP</figcaption></figure>`;
-    chapters.forEach(ch => {
-      html += `<section class="chapter"><h3>${this.esc(ch.h)}</h3>`;
+  renderAbout(chapters, traits) {
+    let first = true, html = "";
+    chapters.forEach((ch, ci) => {
+      html += `<section class="chapter ${ci % 2 ? "from-right" : "from-left"}"><h3>${this.esc(ch.h)}</h3>`;
       ch.items.forEach(it => {
         html += typeof it === "string"
           ? `<p class="sr${first ? " lead" : ""}">${this.md(it)}</p>`
-          : `<blockquote class="about-quote sr"><p>${this.esc(it.quote)}</p><small>${this.esc(it.by)}</small></blockquote>`;
+          : `<blockquote class="quote sr"><p>${this.esc(it.quote)}</p><small>${this.esc(it.by)}</small></blockquote>`;
         first = false;
       });
       html += "</section>";
     });
     this.els.aboutBody.innerHTML = html;
+    document.getElementById("traits").innerHTML = traits.map(t =>
+      `<li class="trait sr"><span class="t-n" aria-hidden="true">${t.n}</span><h4>${this.esc(t.name)}</h4><p>${this.esc(t.line)}</p></li>`).join("");
   },
 
   /* ---------- ambient: clock, parallax, cursor, card tilt ---------- */

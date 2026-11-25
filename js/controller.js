@@ -44,7 +44,7 @@ const Controller = {
 
   enter(screen) {
     Model.state.screen = screen;
-    if (screen === "about" && !Model.state.aboutBuilt) { View.renderAbout(Model.about); Model.state.aboutBuilt = true; }
+    if (screen === "about" && !Model.state.aboutBuilt) { View.renderAbout(Model.about, Model.traits); Model.state.aboutBuilt = true; }
     if (screen === "skills" && !Model.state.skillsBuilt) {
       View.skProjects = Object.fromEntries(Model.projects.map((p, i) => [p.id, { p, i }]));
       View.renderSkillTabs(Model.skills); Model.state.skillsBuilt = true;
@@ -390,7 +390,8 @@ const Controller = {
         });
         if (!res.ok) throw new Error(res.status);
         status.textContent = "Sent. I'll reply to " + d.email + " soon."; View.toast("Message sent");
-        form.reset(); count(); Model.setPref("draft", null); this.play();
+        form.classList.add("sent"); setTimeout(() => form.classList.remove("sent"), 3800);
+        clearTimeout(saveT); form.reset(); count(); Model.setPref("draft", null); this.play();
       } catch {
         status.textContent = "The form relay didn't respond, so I'm opening your email app with the message filled in.";
         location.href = `mailto:${Model.contactEmail}?subject=${encodeURIComponent("Portfolio message from " + d.name)}&body=${encodeURIComponent(d.message + "\n\nReply to: " + d.email)}`;

@@ -112,34 +112,50 @@
       </div>
     </section>
 
-    <section class="screen sub align-right" id="screen-about" aria-labelledby="h-about">
+    <section class="screen sub" id="screen-about" aria-labelledby="h-about">
       <h2 class="screen-head" id="h-about"><span class="ransom" data-ransom="ABOUT"></span></h2>
-      <div class="paper reveal" id="about-body"></div>
-      <a class="cv-btn reveal" href="assets/resume/Resume.pdf" download="Resume.pdf"><span>Download my CV (PDF)</span></a>
+      <div class="about-grid">
+        <aside class="portrait reveal" aria-label="Profile picture and CV">
+          <div class="portrait-bg" aria-hidden="true"></div>
+          <figure class="pfp"><img src="assets/pfp.jpg" width="640" height="722" alt="Black-and-white manga-style illustration used as a profile picture" loading="lazy"><figcaption>PFP</figcaption></figure>
+          <p class="plate"><span>KC</span></p>
+          <p class="plate alt"><span>IT undergraduate</span></p>
+          <a class="cv-btn" href="assets/resume/Resume.pdf" download="Resume.pdf"><span>Download my CV (PDF)</span></a>
+        </aside>
+        <div class="chapters" id="about-body"></div>
+      </div>
+      <section class="traits" aria-labelledby="traits-h">
+        <h3 class="trait-head" id="traits-h">What I bring</h3>
+        <ul class="trait-list" id="traits"></ul>
+      </section>
     </section>
 
-    <section class="screen sub align-right" id="screen-contact" aria-labelledby="h-contact">
+    <section class="screen sub" id="screen-contact" aria-labelledby="h-contact">
       <h2 class="screen-head" id="h-contact"><span class="ransom" data-ransom="CONTACT"></span></h2>
-      <div class="paper reveal narrow">
-        <p>I'm open to <strong>software development and cloud engineering opportunities</strong> and project collaborations. Send a message below and it goes straight to my inbox, or find me here:</p>
-      </div>
-      <div class="contact-list reveal">
-        <a class="contact-chip" href="https://github.com/KCarnage1" target="_blank" rel="noopener"><span>GitHub <span class="ext" aria-hidden="true">↗</span><span class="sr-only">(opens in a new tab)</span></span></a>
-        <a class="contact-chip" href="https://www.instagram.com/kc.cc0" target="_blank" rel="noopener"><span>Instagram <span class="ext" aria-hidden="true">↗</span><span class="sr-only">(opens in a new tab)</span></span></a>
-        <a class="contact-chip" href="assets/resume/Resume.pdf" download="Resume.pdf"><span>Download CV</span></a>
-      </div>
-      <form id="contact-form" class="paper reveal narrow" novalidate>
-        <h3 class="form-head">Send me a message</h3>
-        <label class="field"><span>Name</span><input type="text" name="name" required maxlength="100" autocomplete="name"><small class="err" aria-live="polite"></small></label>
-        <label class="field"><span>Your email</span><input type="email" name="email" required maxlength="150" autocomplete="email" inputmode="email"><small class="err" aria-live="polite"></small></label>
-        <label class="field"><span>Message <em id="msg-count">0 / 3000</em></span><textarea name="message" required rows="5" maxlength="3000"></textarea><small class="err" aria-live="polite"></small></label>
-        <input type="text" name="_honey" tabindex="-1" autocomplete="off" class="honey" aria-hidden="true">
-        <div class="form-foot">
-          <button type="submit" class="cv-btn form-send"><span>Send message</span></button>
-          <span class="form-tip">Ctrl + Enter sends. Unsent drafts stay on this device.</span>
-          <div id="form-status" role="status"></div>
+      <div class="contact-grid">
+        <div class="contact-side">
+          <p class="caption-banner reveal">I'm open to <strong>software development and cloud engineering opportunities</strong> and project collaborations. Send a note on the card, or find me here.</p>
+          <ul class="link-list reveal" aria-label="Where to find me">
+            <li><a class="link-item" href="https://github.com/KCarnage1" target="_blank" rel="noopener"><span class="li-num">01</span><span class="li-text">GitHub</span><span class="li-go" aria-hidden="true">↗</span><span class="sr-only">(opens in a new tab)</span></a></li>
+            <li><a class="link-item" href="https://www.instagram.com/kc.cc0" target="_blank" rel="noopener"><span class="li-num">02</span><span class="li-text">Instagram</span><span class="li-go" aria-hidden="true">↗</span><span class="sr-only">(opens in a new tab)</span></a></li>
+            <li><a class="link-item" href="assets/resume/Resume.pdf" download="Resume.pdf"><span class="li-num">03</span><span class="li-text">Download CV</span><span class="li-go" aria-hidden="true">↓</span></a></li>
+          </ul>
         </div>
-      </form>
+        <form id="contact-form" class="calling-card reveal" novalidate>
+          <p class="card-kicker">Calling card</p>
+          <h3 class="form-head"><span class="ransom" data-ransom="SAY HELLO"></span></h3>
+          <label class="field"><span>Name</span><input type="text" name="name" required maxlength="100" autocomplete="name"><small class="err" data-for="name" aria-live="polite"></small></label>
+          <label class="field"><span>Your email</span><input type="email" name="email" required maxlength="150" autocomplete="email" inputmode="email"><small class="err" data-for="email" aria-live="polite"></small></label>
+          <label class="field"><span>Message <em id="msg-count">0 / 3000</em></span><textarea name="message" required rows="5" maxlength="3000"></textarea><small class="err" data-for="message" aria-live="polite"></small></label>
+          <input type="text" name="_honey" tabindex="-1" autocomplete="off" class="honey" aria-hidden="true">
+          <div class="form-foot">
+            <button type="submit" class="send-btn form-send"><span>Send it</span></button>
+            <span class="form-tip">Ctrl + Enter sends. Unsent drafts stay on this device.</span>
+            <div id="form-status" role="status"></div>
+          </div>
+          <div class="stamp" aria-hidden="true"><span>SENT</span></div>
+        </form>
+      </div>
     </section>
   </main>
 
@@ -170,7 +186,7 @@
     <label class="mp-vol"><span class="sr-only">Volume</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 8.5a5 5 0 010 7"/></svg><input type="range" id="mp-vol" min="0" max="100" value="60"></label>
   </div>
   <p class="mp-status" id="mp-status" role="status"></p>
-  <audio id="music" src="assets/music/beneath-the-mask.mp3" preload="none" loop></audio>
+  <audio id="music" src="assets/music/beneath-the-mask.mp3" preload="auto" loop></audio>
 </section>
 
 <button id="to-top"><span aria-hidden="true">▲</span><span class="sr-only">Back to top</span></button>

@@ -1,9 +1,10 @@
-/* MUSIC: the background track and its player. Off until the visitor starts it; remembers volume and whether it was left playing. */
+/* MUSIC: the background track and its player. Starts on arrival unless the visitor turned it off last time; remembers volume. */
 const Music = {
   track: { title: "Beneath the Mask", artist: "Persona 5 soundtrack" },
   open: false,
   playing: false,
-  wanted: false,
+  wanted: true,
+  mutedAuto: false,
   fadeTween: null,
   raf: 0,
   an: null,
@@ -21,7 +22,7 @@ const Music = {
     this.audio.volume = 0;
     this.audio.loop = Model.pref("musicLoop", true);
     this.loop.setAttribute("aria-pressed", this.audio.loop);
-    this.wanted = Model.pref("musicOn", false);
+    this.wanted = Model.pref("musicOn", true);
 
     this.btn.addEventListener("click", () => this.toggleOpen());
     this.play.addEventListener("click", () => this.toggle());
@@ -55,12 +56,49 @@ const Music = {
       navigator.mediaSession.setActionHandler("pause", () => this.stop());
     }
 
-    // Browsers only allow sound after a gesture. If it was left playing last visit, resume at the first click or key press.
-    if (this.wanted) {
-      const resume = () => { removeEventListener("pointerdown", resume, true); removeEventListener("keydown", resume, true); if (this.wanted && !this.playing) this.start(true); };
-      addEventListener("pointerdown", resume, true); addEventListener("keydown", resume, true);
-    }
     this.sync(); this.paint();
+    if (this.wanted) this.autostart();
+  },
+
+  // Browsers only allow sound after the visitor has interacted. So: try to play with sound; if that is blocked, play muted
+  // straight away and unmute on the first click, tap or key press.
+  async autostart() {
+    const a = this.audio;
+    try {
+      a.volume = 0;
+      await a.play();
+      this.playing = true;
+      this.fade(this.volume, this.reduced ? 0 : 1.5);
+    } catch {
+      try {
+        a.muted = true; a.volume = this.volume;
+        await a.play();
+        this.playing = true; this.mutedAuto = true;
+        this.say("Playing muted. Click anywhere or press a key to hear it.");
+        View.toast("Music is on. Click anywhere to hear it.");
+      } catch {
+        this.playing = false;
+        this.say("Click anywhere or press a key to start the music.");
+        View.toast("Click anywhere to start the music.");
+      }
+    }
+    this.sync();
+    if (!this.playing || this.mutedAuto) this.armUnlock();
+  },
+
+  armUnlock() {
+    const unlock = () => {
+      ["pointerdown", "keydown", "touchend"].forEach(t => removeEventListener(t, unlock, true));
+      if (this.mutedAuto) {
+        this.mutedAuto = false;
+        this.audio.muted = false; this.audio.volume = 0;
+        this.ensureAnalyser();
+        if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+        this.fade(this.volume, this.reduced ? 0 : 1.2);
+        this.say("");
+      } else if (this.wanted && !this.playing) this.start(true);
+    };
+    ["pointerdown", "keydown", "touchend"].forEach(t => addEventListener(t, unlock, true));
   },
 
   say(msg) { this.status.textContent = msg; },
@@ -70,7 +108,10 @@ const Music = {
     this.open = force === undefined ? !this.open : force;
     this.panel.hidden = !this.open;
     this.btn.setAttribute("aria-expanded", this.open);
-    if (this.open) { this.play.focus({ preventScroll: true }); this.draw(); }
+    if (this.open) {
+      if (this.playing && !this.mutedAuto) { this.ensureAnalyser(); if (this.ctx && this.ctx.state === "suspended") this.ctx.resume(); }
+      this.play.focus({ preventScroll: true }); this.draw();
+    }
   },
 
   toggle() { this.playing ? this.stop() : this.start(); },
@@ -90,6 +131,7 @@ const Music = {
 
   async start(quiet) {
     this.wanted = true; Model.setPref("musicOn", true);
+    this.mutedAuto = false; this.audio.muted = false;
     if (!this.audio.getAttribute("src")) return;
     this.ensureAnalyser();
     try {

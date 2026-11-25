@@ -469,8 +469,13 @@ const View = {
 
   /* ---------- ambient: clock, parallax, cursor, card tilt ---------- */
   startClock() {
-    const tick = () => { const d = new Date(); this.els.clock.textContent = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); this.renderCalendar(d); };
+    // The first toLocaleTimeString call sets up the browser's internationalisation data, which can take tens of milliseconds right
+    // at startup. The first paint uses a plain 12-hour string instead, and the localized one takes over once the browser is idle.
+    let localized = false;
+    const plain = d => { const h = d.getHours(); return String(h % 12 || 12).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + " " + (h < 12 ? "AM" : "PM"); };
+    const tick = () => { const d = new Date(); this.els.clock.textContent = localized ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : plain(d); this.renderCalendar(d); };
     tick(); setInterval(tick, 15000);
+    (window.requestIdleCallback || (f => setTimeout(f, 1500)))(() => { localized = true; tick(); });
   },
 
   startParallax() {

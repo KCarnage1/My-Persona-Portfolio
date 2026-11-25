@@ -188,7 +188,10 @@ const Music = {
       const AC = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AC();
       const src = this.ctx.createMediaElementSource(this.audio);
-      this.an = this.ctx.createAnalyser(); this.an.fftSize = 64; this.an.smoothingTimeConstant = 0.7;
+      this.an = this.ctx.createAnalyser();
+      // 1024 samples gives about 43 Hz per bin, enough to tell bass from treble. Smoothing is done in draw() (fast rise, slower
+      // fall, by elapsed time), and the decibel window is set so quiet and loud parts of a song both show.
+      this.an.fftSize = 1024; this.an.smoothingTimeConstant = 0.35; this.an.minDecibels = -92; this.an.maxDecibels = -22;
       src.connect(this.an); this.an.connect(this.ctx.destination);
       this.data = new Uint8Array(this.an.frequencyBinCount);
     } catch { this.anFailed = true; this.an = null; }
@@ -257,25 +260,48 @@ const Music = {
     if (a.currentTime > 0) try { sessionStorage.setItem("pf:musicAt", JSON.stringify({ i: this.index, t: a.currentTime })); } catch {}
   },
 
+  // Equalizer: 16 bars on a log frequency scale from 40 Hz to 15 kHz, so each bar is one slice of what you actually hear
+  // (a linear scale would put most bars on the treble, where music has little energy). Each bar is the loudest bin in its slice,
+  // tilted up a little towards the treble to cancel the natural bass-heavy slope, then smoothed with a fast attack and slow release.
+  bands() {
+    const n = 16, sr = this.ctx ? this.ctx.sampleRate : 44100, bins = this.an.frequencyBinCount, hz = sr / 2 / bins;
+    const lo = 40, hi = Math.min(15000, sr / 2 - 100), edges = [];
+    for (let i = 0; i <= n; i++) edges.push(lo * Math.pow(hi / lo, i / n));
+    this.edges = edges.map(f => f / hz);   // in bins
+    return n;
+  },
+
   draw() {
     cancelAnimationFrame(this.raf);
     if (!this.open) return;   // the equalizer is only visible while the player is open
     const c = this.viz, ctx = c.getContext("2d"), w = c.width, h = c.height;
-    ctx.clearRect(0, 0, w, h);
-    const live = this.open && this.playing && this.an && !this.reduced && !document.hidden;
+    const live = this.playing && this.an && !this.reduced && !document.hidden && !this.mutedAuto;
     const cs = getComputedStyle(document.documentElement), lo = cs.getPropertyValue("--red").trim() || "#e60012", hi = document.documentElement.dataset.theme === "p5r" ? "#ffc61a" : "#ffffff";
-    const n = 16, gap = 4, bw = (w - gap * (n - 1)) / n;
-    const frame = () => {
+    const n = live ? this.bands() : 16, gap = 4, bw = (w - gap * (n - 1)) / n;
+    const lv = this.levels && this.levels.length === n ? this.levels : (this.levels = new Float32Array(n).fill(0.03));
+    const pk = this.peaks && this.peaks.length === n ? this.peaks : (this.peaks = new Float32Array(n));
+    let last = 0;
+    const frame = ts => {
+      const dt = Math.min(ts - (last || ts), 60); last = ts;
       ctx.clearRect(0, 0, w, h);
       if (live) this.an.getByteFrequencyData(this.data);
+      const up = 1 - Math.exp(-dt / 28), down = 1 - Math.exp(-dt / 150);
       for (let i = 0; i < n; i++) {
-        const v = live ? this.data[Math.min(this.data.length - 1, Math.floor(i * 1.6))] / 255 : 0.04;
-        const bh = Math.max(3, v * h);
+        let target = 0.03;
+        if (live) {
+          const a = this.edges[i], b = Math.max(this.edges[i + 1], a + 1);
+          let m = 0; for (let k = Math.floor(a); k < Math.ceil(b) && k < this.data.length; k++) if (this.data[k] > m) m = this.data[k];
+          target = Math.min(1, Math.pow(m / 255, 1.25) * (0.9 + 0.5 * i / (n - 1)));
+        }
+        lv[i] += (target - lv[i]) * (target > lv[i] ? up : down);
+        pk[i] = Math.max(lv[i], pk[i] - dt / 1400);
+        const bh = Math.max(3, lv[i] * h);
         ctx.fillStyle = i % 5 === 2 ? hi : lo;
         ctx.fillRect(i * (bw + gap), h - bh, bw, bh);
+        if (live && pk[i] > lv[i] + .04) { ctx.fillStyle = hi; ctx.fillRect(i * (bw + gap), h - pk[i] * h - 3, bw, 2); }
       }
-      if (live && this.open && this.playing) this.raf = requestAnimationFrame(frame);
+      if (this.open && (live || lv.some(v => v > 0.035))) this.raf = requestAnimationFrame(frame);   // keep going while the bars settle
     };
-    frame();
+    this.raf = requestAnimationFrame(frame);
   },
 };

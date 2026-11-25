@@ -1,6 +1,7 @@
-/* MUSIC: the background track and its player. Starts on arrival unless the visitor turned it off last time; remembers volume. */
+/* MUSIC: the background playlist and its player. Starts on arrival unless the visitor turned it off last time; remembers
+   the volume, the song and where they were in it. Songs come from Model.music. */
 const Music = {
-  track: { title: "Beneath the Mask", artist: "Persona 5 soundtrack" },
+  index: 0,
   open: false,
   playing: false,
   wanted: true,
@@ -13,22 +14,32 @@ const Music = {
   init() {
     const $ = id => document.getElementById(id);
     Object.assign(this, {
-      audio: $("music"), panel: $("player"), btn: $("music-btn"), play: $("mp-play"), seek: $("mp-seek"), vol: $("mp-vol"),
-      loop: $("mp-loop"), cur: $("mp-cur"), dur: $("mp-dur"), status: $("mp-status"), viz: $("mp-viz"),
+      audio: $("music"), panel: $("player"), btn: $("music-btn"), play: $("mp-play"), prev: $("mp-prev"), next: $("mp-next"),
+      seek: $("mp-seek"), vol: $("mp-vol"), loop: $("mp-loop"), cur: $("mp-cur"), dur: $("mp-dur"), status: $("mp-status"),
+      viz: $("mp-viz"), list: $("mp-list"), title: $("mp-title"), credit: $("mp-credit"),
     });
+    this.tracks = Model.music;
     this.reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.volume = Model.pref("musicVolume", 0.6);
     this.vol.value = Math.round(this.volume * 100);
     this.audio.volume = 0;
-    this.audio.loop = Model.pref("musicLoop", true);
+    this.audio.loop = Model.pref("musicRepeatOne", false);
     this.loop.setAttribute("aria-pressed", this.audio.loop);
     this.wanted = Model.pref("musicOn", true);
+    const saved = Model.pref("musicTrack", 0);
+    this.index = Number.isInteger(saved) && saved >= 0 && saved < this.tracks.length ? saved : 0;
+
+    this.renderList();
+    this.load(this.index);
 
     this.btn.addEventListener("click", () => this.toggleOpen());
     this.play.addEventListener("click", () => this.toggle());
+    this.prev.addEventListener("click", () => this.go(-1));
+    this.next.addEventListener("click", () => this.go(1));
+    this.list.addEventListener("click", e => { const b = e.target.closest("[data-track]"); if (b) this.select(+b.dataset.track); });
     this.loop.addEventListener("click", () => {
       this.audio.loop = !this.audio.loop;
-      this.loop.setAttribute("aria-pressed", this.audio.loop); Model.setPref("musicLoop", this.audio.loop);
+      this.loop.setAttribute("aria-pressed", this.audio.loop); Model.setPref("musicRepeatOne", this.audio.loop);
     });
     this.vol.addEventListener("input", () => {
       this.volume = this.vol.value / 100; Model.setPref("musicVolume", this.volume);
@@ -47,23 +58,70 @@ const Music = {
     a.addEventListener("waiting", () => this.say("Loading…"));
     a.addEventListener("playing", () => { this.say(""); this.sync(); });
     a.addEventListener("pause", () => this.sync());
-    a.addEventListener("ended", () => { this.say("Finished. Press play to hear it again."); this.sync(); });
-    a.addEventListener("error", () => { this.playing = false; this.sync(); this.say("The music file didn't load. Press play to try again."); });
+    // with repeat-one on, the element loops by itself and never fires "ended"
+    a.addEventListener("ended", () => { if (this.playing) this.go(1); else { this.say("Finished. Press play to hear it again."); this.sync(); } });
+    a.addEventListener("error", () => { this.playing = false; this.sync(); this.say("That song didn't load. Press play to try again."); });
 
     if ("mediaSession" in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({ title: this.track.title, artist: this.track.artist });
       navigator.mediaSession.setActionHandler("play", () => this.start());
       navigator.mediaSession.setActionHandler("pause", () => this.stop());
+      navigator.mediaSession.setActionHandler("previoustrack", () => this.go(-1));
+      navigator.mediaSession.setActionHandler("nexttrack", () => this.go(1));
     }
 
     this.sync(); this.paint();
     if (this.wanted) this.autostart();
   },
 
+  say(msg) { this.status.textContent = msg; },
+  fmt(s) { return isFinite(s) ? Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0") : "0:00"; },
+
+  /* ---------- playlist ---------- */
+  renderList() {
+    this.list.innerHTML = this.tracks.map((t, i) =>
+      `<li><button type="button" class="mp-track" data-track="${i}"><span class="mp-n" aria-hidden="true">${String(i + 1).padStart(2, "0")}</span><span class="mp-t">${View.esc(t.title)}</span></button></li>`).join("");
+  },
+
+  // point the element at song i and update the labels; it doesn't start playing
+  load(i) {
+    this.index = i;
+    const t = this.tracks[i];
+    this.audio.src = t.src;
+    this.title.textContent = t.title; this.credit.textContent = t.artist;
+    this.list.querySelectorAll(".mp-track").forEach((b, j) => { j === i ? b.setAttribute("aria-current", "true") : b.removeAttribute("aria-current"); });
+    if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: t.title, artist: t.artist });
+    this.paint();
+  },
+
+  select(i) {
+    if (i === this.index && !this.audio.ended) { this.toggle(); return; }
+    Model.setPref("musicTrack", i);
+    try { sessionStorage.removeItem("pf:musicAt"); } catch {}
+    this.load(i);
+    this.start(true);
+  },
+
+  go(delta) { this.select((this.index + delta + this.tracks.length) % this.tracks.length); },
+
+  toggleOpen(force) {
+    this.open = force === undefined ? !this.open : force;
+    this.panel.hidden = !this.open;
+    this.btn.setAttribute("aria-expanded", this.open);
+    if (this.open) {
+      if (this.playing && !this.mutedAuto) { this.ensureAnalyser(); if (this.ctx && this.ctx.state === "suspended") this.ctx.resume(); }
+      this.play.focus({ preventScroll: true }); this.draw();
+    }
+  },
+
+  toggle() { this.playing ? this.stop() : this.start(); },
+
+  /* ---------- starting and stopping ---------- */
+
   // Browsers only allow sound after the visitor has interacted. So: try to play with sound; if that is blocked, play muted
   // straight away and unmute on the first click, tap or key press.
   async autostart() {
     const a = this.audio;
+    this.restorePosition();
     try {
       a.volume = 0;
       await a.play();
@@ -101,22 +159,7 @@ const Music = {
     ["pointerdown", "keydown", "touchend"].forEach(t => addEventListener(t, unlock, true));
   },
 
-  say(msg) { this.status.textContent = msg; },
-  fmt(s) { return isFinite(s) ? Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0") : "0:00"; },
-
-  toggleOpen(force) {
-    this.open = force === undefined ? !this.open : force;
-    this.panel.hidden = !this.open;
-    this.btn.setAttribute("aria-expanded", this.open);
-    if (this.open) {
-      if (this.playing && !this.mutedAuto) { this.ensureAnalyser(); if (this.ctx && this.ctx.state === "suspended") this.ctx.resume(); }
-      this.play.focus({ preventScroll: true }); this.draw();
-    }
-  },
-
-  toggle() { this.playing ? this.stop() : this.start(); },
-
-  // The analyser reads the real signal for the equalizer. If Web Audio isn't available the track still plays, just without bars.
+  // The analyser reads the real signal for the equalizer. If Web Audio isn't available the song still plays, just without bars.
   ensureAnalyser() {
     if (this.an || this.anFailed) return;
     try {
@@ -129,16 +172,22 @@ const Music = {
     } catch { this.anFailed = true; this.an = null; }
   },
 
+  restorePosition() {
+    try {
+      const s = JSON.parse(sessionStorage.getItem("pf:musicAt") || "null");
+      if (s && s.i === this.index && s.t > 0 && this.audio.currentTime === 0) this.audio.currentTime = s.t;
+    } catch {}
+  },
+
   async start(quiet) {
     this.wanted = true; Model.setPref("musicOn", true);
     this.mutedAuto = false; this.audio.muted = false;
-    if (!this.audio.getAttribute("src")) return;
     this.ensureAnalyser();
     try {
       if (this.ctx && this.ctx.state === "suspended") await this.ctx.resume();
-      const saved = +sessionStorage.getItem("pf:musicAt");
-      if (saved > 0 && this.audio.currentTime === 0 && !this.audio.ended) this.audio.currentTime = saved;
+      this.restorePosition();
       this.say("Loading…");
+      this.audio.volume = 0;
       await this.audio.play();
       this.playing = true;
       this.fade(this.volume, this.reduced ? 0 : 1.2);
@@ -146,7 +195,7 @@ const Music = {
     } catch (e) {
       this.playing = false;
       if (e && e.name === "NotAllowedError") this.say("Your browser wants a click first. Press play.");
-      else if (e && e.name !== "AbortError") this.say("The music file didn't load. Press play to try again.");
+      else if (e && e.name !== "AbortError") this.say("That song didn't load. Press play to try again.");
     }
     this.sync();
   },
@@ -165,6 +214,7 @@ const Music = {
     this.fadeTween = gsap.to(a, { volume: to, duration: seconds, ease: "power1.inOut", onComplete: () => { this.fadeTween = null; done && done(); } });
   },
 
+  /* ---------- display ---------- */
   sync() {
     const on = this.playing && !this.audio.paused;
     this.btn.classList.toggle("playing", on);
@@ -177,9 +227,10 @@ const Music = {
   paint() {
     const a = this.audio, d = a.duration;
     this.cur.textContent = this.fmt(a.currentTime); this.dur.textContent = this.fmt(d);
-    if (isFinite(d) && d > 0 && document.activeElement !== this.seek) this.seek.value = Math.round((a.currentTime / d) * 1000);
+    if (isFinite(d) && d > 0) { if (document.activeElement !== this.seek) this.seek.value = Math.round((a.currentTime / d) * 1000); }
+    else if (document.activeElement !== this.seek) this.seek.value = 0;
     this.seek.setAttribute("aria-valuetext", this.fmt(a.currentTime) + " of " + this.fmt(d));
-    if (a.currentTime > 0) try { sessionStorage.setItem("pf:musicAt", String(a.currentTime)); } catch {}
+    if (a.currentTime > 0) try { sessionStorage.setItem("pf:musicAt", JSON.stringify({ i: this.index, t: a.currentTime })); } catch {}
   },
 
   draw() {

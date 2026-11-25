@@ -223,6 +223,13 @@ const Model = {
     ] },
   ],
 
+  // The playlist. Add a song by dropping the file in assets/music/ and adding a line here.
+  music: [
+    { title: "Beneath the Mask", artist: "Persona soundtrack", src: "assets/music/beneath-the-mask.mp3" },
+    { title: "Last Surprise", artist: "Persona soundtrack", src: "assets/music/last-surprise.mp3" },
+    { title: "Color Your Night", artist: "Persona soundtrack", src: "assets/music/color-your-night.mp3" },
+  ],
+
   // Four traits, each taken from what the About text already says; no scores.
   traits: [
     { n: "I", name: "Problem-solving", line: "When something breaks, I'd rather find the real cause than patch over it, even if that takes longer." },

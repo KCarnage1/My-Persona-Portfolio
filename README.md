@@ -13,7 +13,7 @@ Everything you'd normally change lives in `js/model.js`:
 
 ## Controls
 
-`↑ ↓` + `Enter` on the menu · `1-4` jump to a section · `Q / E` (or `← →`) switch sections · `/` or `Ctrl + K` quick jump · `Esc` back · `P` play or pause the music · `M` sound effects · `B` pause the background · `?` help
+`↑ ↓` + `Enter` on the menu · `1-4` jump to a section · `Q / E` (or `← →`) switch sections · `/` or `Ctrl + K` quick jump · `Esc` back · `P` play or pause the music · `[` `]` previous or next song · `M` sound effects · `B` pause the background · `?` help
 
 ## Credits
 

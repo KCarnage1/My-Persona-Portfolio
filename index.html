@@ -174,19 +174,22 @@
 <section id="player" aria-label="Music player" hidden>
   <p class="mp-kicker">Now playing</p>
   <h2 class="mp-title" id="mp-title">Beneath the Mask</h2>
-  <p class="mp-credit">Persona 5 soundtrack</p>
+  <p class="mp-credit" id="mp-credit">Persona soundtrack</p>
   <canvas id="mp-viz" width="320" height="56" aria-hidden="true"></canvas>
   <div class="mp-seek">
     <input type="range" id="mp-seek" min="0" max="1000" value="0" aria-label="Seek">
     <p class="mp-time"><span id="mp-cur">0:00</span><span id="mp-dur">0:00</span></p>
   </div>
   <div class="mp-row">
+    <button type="button" id="mp-prev" class="mp-skip" aria-label="Previous song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h2.5v14H6zM20 5v14L9.5 12z"/></svg></button>
     <button type="button" id="mp-play" class="mp-main" aria-label="Play"><svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg><svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg></button>
-    <button type="button" id="mp-loop" aria-pressed="true" title="Repeat">Repeat</button>
-    <label class="mp-vol"><span class="sr-only">Volume</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 8.5a5 5 0 010 7"/></svg><input type="range" id="mp-vol" min="0" max="100" value="60"></label>
+    <button type="button" id="mp-next" class="mp-skip" aria-label="Next song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 5H18v14h-2.5zM4 5l10.5 7L4 19z"/></svg></button>
+    <button type="button" id="mp-loop" aria-pressed="false" title="Repeat this song">Repeat one</button>
   </div>
+  <label class="mp-vol"><span class="sr-only">Volume</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 8.5a5 5 0 010 7"/></svg><input type="range" id="mp-vol" min="0" max="100" value="60"></label>
+  <ol class="mp-list" id="mp-list" aria-label="Songs"></ol>
   <p class="mp-status" id="mp-status" role="status"></p>
-  <audio id="music" src="assets/music/beneath-the-mask.mp3" preload="auto" loop></audio>
+  <audio id="music" src="assets/music/beneath-the-mask.mp3" preload="auto"></audio>
 </section>
 
 <button id="to-top"><span aria-hidden="true">▲</span><span class="sr-only">Back to top</span></button>
@@ -223,6 +226,7 @@
       <dt><span class="key">Esc</span></dt><dd>Close a window, or go back to the menu</dd>
       <dt><span class="key">←</span><span class="key">→</span></dt><dd>Previous / next project while one is open</dd>
       <dt><span class="key">P</span></dt><dd>Play or pause the music</dd>
+      <dt><span class="key">[</span><span class="key">]</span></dt><dd>Previous / next song</dd>
       <dt><span class="key">M</span></dt><dd>Sound effects on / off</dd>
       <dt><span class="key">B</span></dt><dd>Pause / play the animated background</dd>
     </dl>

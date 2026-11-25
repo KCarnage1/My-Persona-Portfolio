@@ -220,6 +220,9 @@ const Controller = {
       { label: "GitHub profile", kind: "Opens new tab", run: () => open("https://github.com/" + Model.githubUser, "_blank", "noopener") },
       { label: "Send me a message", kind: "Contact", keys: "email form", run: () => this.go("contact", true, () => document.querySelector("#contact-form [name=name]").focus()) },
       { label: () => (Music.playing ? "Pause music" : "Play music"), kind: "Music", keys: "beneath the mask song audio", run: () => Music.toggle() },
+      { label: "Next song", kind: "Music", keys: "skip track playlist", run: () => Music.go(1) },
+      { label: "Previous song", kind: "Music", keys: "back track playlist", run: () => Music.go(-1) },
+      ...Model.music.map((t, i) => ({ label: "Play " + t.title, kind: "Music", keys: "song track", run: () => Music.select(i) })),
       { label: "Open music player", kind: "Music", keys: "volume seek", run: () => Music.toggleOpen(true) },
       { label: () => (this.sound ? "Turn sound effects off" : "Turn sound effects on"), kind: "Setting", keys: "audio mute clicks", run: () => this.toggleSound() },
       { label: () => (Model.state.motion ? "Pause background animation" : "Play background animation"), kind: "Setting", keys: "motion", run: () => this.toggleMotion() },
@@ -335,6 +338,8 @@ const Controller = {
       if (k === "?") { this.openHelp(); return; }
       if (k === "m" || k === "M") { this.toggleSound(); return; }
       if (k === "p" || k === "P") { Music.toggle(); return; }
+      if (k === "]") { Music.go(1); return; }
+      if (k === "[") { Music.go(-1); return; }
       if (k === "Escape" && Music.open) { Music.toggleOpen(false); return; }
       if (k === "b" || k === "B") { this.toggleMotion(); return; }
       if (k >= "1" && k <= "4") { this.go(Model.sections[+k - 1]); return; }

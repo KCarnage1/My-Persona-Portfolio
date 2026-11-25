@@ -79,7 +79,7 @@ const Model = {
         "In-game settings through PluginConfigurator.",
         "Full credits for the original code and every 3D model, including the CC BY 4.0 licensed scans.",
       ],
-      stack: ["Unity", "C#", "Modding", "3D assets"],
+      stack: ["Unity", "Modding", "3D assets"],
       links: [{ label: "Code", url: "https://github.com/KCarnage1/UltraNiko-Updated", primary: true }],
     },
     {

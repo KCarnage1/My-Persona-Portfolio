@@ -448,33 +448,67 @@ const View = {
   startParallax() {
     if (this.reduced) return;
     const st = document.getElementById("bg-stripes"), ht = document.getElementById("bg-halftone");
-    let tx = 0, ty = 0, cx = 0, cy = 0, raf = 0;
-    const loop = () => {
-      cx += (tx - cx) * 0.06; cy += (ty - cy) * 0.06;
+    let tx = 0, ty = 0, cx = 0, cy = 0, raf = 0, last = 0;
+    // easing is based on elapsed time, so it feels the same on 60, 120 and 240 Hz screens
+    const loop = ts => {
+      const dt = Math.min(ts - (last || ts), 50); last = ts;
+      const k = 1 - Math.exp(-dt / 260);
+      cx += (tx - cx) * k; cy += (ty - cy) * k;
       st.style.transform = `translate3d(${cx * 22}px,${cy * 14}px,0)`;
       ht.style.transform = `translate3d(${cx * -34}px,${cy * -22}px,0)`;
-      raf = Math.abs(tx - cx) + Math.abs(ty - cy) > 0.001 ? requestAnimationFrame(loop) : 0;   // idle when the pointer stops
+      if (Math.abs(tx - cx) + Math.abs(ty - cy) > 0.001) raf = requestAnimationFrame(loop); else { raf = 0; last = 0; }   // idle when the pointer stops
     };
     addEventListener("mousemove", e => { tx = e.clientX / innerWidth - 0.5; ty = e.clientY / innerHeight - 0.5; if (!raf) raf = requestAnimationFrame(loop); }, { passive: true });
   },
 
-  // 30-frame sprite cursor that eases after the pointer
+  // Sprite cursor that follows the pointer, with a trail of diamonds, a ring that opens on links, and a burst of slashes on click.
+  // Everything is driven by real elapsed time so it stays smooth and identical at any refresh rate.
   startCursor() {
     if (!matchMedia("(pointer:fine)").matches || this.reduced) return;
     const cur = this.els.cursor;
     document.body.classList.add("cursor-on");
-    let x = -100, y = -100, px = -100, py = -100, frame = 0, last = 0, vis = false;
+    const N = 9, trail = [], layer = document.createElement("div");
+    layer.id = "cursor-fx"; layer.setAttribute("aria-hidden", "true");
+    const ring = document.createElement("i"); ring.className = "c-ring"; layer.appendChild(ring);
+    for (let i = 0; i < N; i++) { const d = document.createElement("i"); d.className = "c-dot" + (i % 3 === 1 ? " alt" : ""); layer.appendChild(d); trail.push({ el: d, x: -100, y: -100 }); }
+    document.body.appendChild(layer);
+    let x = -100, y = -100, px = -100, py = -100, frame = 0, acc = 0, vis = false, link = false, speed = 0, lastT = 0;
     addEventListener("mousemove", e => {
       x = e.clientX; y = e.clientY;
-      if (!vis) { px = x; py = y; cur.style.display = "block"; vis = true; }
-      cur.classList.toggle("link", !!e.target.closest?.("a,button,.card.clickable,.menu-item,input,textarea,[data-close],#palette-list li"));
+      if (!vis) { px = x; py = y; trail.forEach(t => { t.x = x; t.y = y; }); cur.style.display = "block"; layer.style.display = "block"; vis = true; }
+      link = !!e.target.closest?.("a,button,.card.clickable,.menu-item,input,textarea,[data-close],#palette-list li,.pj-item,.sk-row");
+      cur.classList.toggle("link", link); ring.classList.toggle("open", link);
     }, { passive: true });
-    document.documentElement.addEventListener("mouseleave", () => { cur.style.display = "none"; vis = false; });
+    document.documentElement.addEventListener("mouseleave", () => { cur.style.display = "none"; layer.style.display = "none"; vis = false; });
+    addEventListener("pointerdown", e => {
+      if (e.pointerType !== "mouse") return;
+      ring.classList.add("press");
+      for (let i = 0; i < 8; i++) {
+        const b = document.createElement("i"); b.className = "c-burst" + (i % 2 ? " alt" : "");
+        const a = (i / 8) * Math.PI * 2 + Math.random() * .4, d = 26 + Math.random() * 26;
+        b.style.left = e.clientX + "px"; b.style.top = e.clientY + "px"; b.style.rotate = a + "rad";
+        layer.appendChild(b);
+        b.animate([{ transform: "translate(-50%,-50%) translateX(6px) scaleX(.4)", opacity: 1 }, { transform: `translate(-50%,-50%) translateX(${d}px) scaleX(1.4)`, opacity: 0 }],
+          { duration: 420 + Math.random() * 120, easing: "cubic-bezier(.2,.8,.2,1)" }).finished.then(() => b.remove(), () => b.remove());
+      }
+    }, { passive: true });
+    addEventListener("pointerup", () => ring.classList.remove("press"), { passive: true });
     const tick = ts => {
+      const dt = Math.min(ts - (lastT || ts), 50); lastT = ts;
       if (vis) {
-        if (ts - last >= 50) { frame = (frame + 1) % 30; last = ts; cur.style.backgroundPosition = -frame * 48 + "px 0"; }
-        px += (x - px) * 0.4; py += (y - py) * 0.4;
+        acc += dt; if (acc >= 50) { frame = (frame + Math.floor(acc / 50)) % 30; acc %= 50; cur.style.backgroundPosition = -frame * 48 + "px 0"; }
+        const k = 1 - Math.exp(-dt / 28);               // the sprite eases after the pointer
+        const ox = px, oy = py; px += (x - px) * k; py += (y - py) * k;
+        speed += (Math.hypot(px - ox, py - oy) / Math.max(dt, 1) * 16 - speed) * (1 - Math.exp(-dt / 90));
         cur.style.transform = `translate3d(${px - 6}px,${py - 4}px,0)`;
+        ring.style.transform = `translate3d(${px}px,${py}px,0) translate(-50%,-50%)`;
+        let tx = px, ty = py;
+        trail.forEach((t, i) => {                       // each dot chases the one in front, so they stream out behind a fast cursor
+          const f = 1 - Math.exp(-dt / (34 + i * 9));
+          t.x += (tx - t.x) * f; t.y += (ty - t.y) * f; tx = t.x; ty = t.y;
+          const sc = Math.max(0, 1 - i / N) * Math.min(1, speed / 6);
+          t.el.style.transform = `translate3d(${t.x}px,${t.y}px,0) translate(-50%,-50%) rotate(45deg) scale(${sc})`;
+        });
       }
       requestAnimationFrame(tick);
     };

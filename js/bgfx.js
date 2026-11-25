@@ -15,10 +15,11 @@
   const cards = Array.from({ length: 14 }, (_, i) => ({ p: R() * TAU, r: .25 + R() * .75, dir: i % 2 ? 1 : -1, w: .6 + R() * .6 }));
   const glints = Array.from({ length: 16 }, () => ({ x: R(), y: R(), s: 8 + R() * 16, p: R() * 9, v: .0004 + R() * .0006 }));
 
-  const resize = () => { const k = Math.min(devicePixelRatio || 1, 1.5); W = c.width = innerWidth * k; H = c.height = innerHeight * k; m = Math.min(W, H); };
+  const resize = () => { let k = Math.min(devicePixelRatio || 1, 1.5); const px = innerWidth * innerHeight * k * k; if (px > 2.2e6) k *= Math.sqrt(2.2e6 / px);   // keep the pixel count sane on big or hi-dpi screens
+    W = c.width = Math.round(innerWidth * k); H = c.height = Math.round(innerHeight * k); m = Math.min(W, H); };
   addEventListener("resize", resize); resize();
   addEventListener("mousemove", e => { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; }, { passive: true });
-  let paused = false, lastT = 0, running = false;
+  let paused = false, lastT = 0, running = false, f = 1, prevT = 0;   // f = frames elapsed at 60 Hz, so motion speed never depends on the refresh rate
   const redrawStill = () => { if (reduced || paused) requestAnimationFrame(still); };
   new MutationObserver(() => { scene = document.body.dataset.screen; redrawStill(); }).observe(document.body, { attributes: true, attributeFilter: ["data-screen"] });
   new MutationObserver(redrawStill).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
@@ -30,7 +31,7 @@
   const disc = (x, y, r, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); };
   function drawShards(rgb, line) {
     shards.forEach(s => {
-      s.y -= s.v * 16; s.x += s.v * 6; s.r += s.vr; if (s.y < -.1) { s.y = 1.1; s.x = R(); } if (s.x > 1.1) s.x = -.1;
+      s.y -= s.v * 16 * f; s.x += s.v * 6 * f; s.r += s.vr * f; if (s.y < -.1) { s.y = 1.1; s.x = R(); } if (s.x > 1.1) s.x = -.1;
       ctx.save(); ctx.translate(s.x * W - sx * 90 * s.d, s.y * H - sy * 60 * s.d); ctx.rotate(s.r);
       ctx.fillStyle = `rgba(${rgb},${s.a})`; ctx.strokeStyle = `rgba(${line},${s.a + .2})`; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(-s.s, -s.s * .3); ctx.lineTo(s.s * .2, -s.s * .8); ctx.lineTo(s.s, s.s * .4); ctx.lineTo(-s.s * .4, s.s * .7); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
@@ -174,7 +175,7 @@
       const x = W * .5 - sx * 30, y = H * .36 - sy * 20;
       glow(x, y, m * .6, "140,255,200", .35); disc(x, y, m * .2, "#c9ffe6"); disc(x + m * .03, y - m * .02, m * .19, "rgba(6,53,42,.35)");
       coffins.forEach(k => {
-        k.y -= k.v * 10; if (k.y < -.25) { k.y = 1.25; k.x = R(); }
+        k.y -= k.v * 10 * f; if (k.y < -.25) { k.y = 1.25; k.x = R(); }
         const w = m * .05, h = m * .12;
         ctx.save(); ctx.translate(k.x * W - sx * 60 * k.d, k.y * H - sy * 40 * k.d); ctx.rotate(k.r + Math.sin(t / 2200 + k.p) * .08);
         ctx.fillStyle = "rgba(2,20,15,.88)"; ctx.strokeStyle = "rgba(120,255,190,.55)"; ctx.lineWidth = 2;
@@ -218,11 +219,17 @@
   function still() { pick()(lastT); }
   function frame(t) {
     if (paused || reduced) { running = false; return; }
-    sx += (mx - sx) * .05; sy += (my - sy) * .05; lastT = t;
-    pick()(t);
     requestAnimationFrame(frame);
+    // The wallpaper moves slowly, so it is drawn at most about 70 times a second: on a 120 or 240 Hz screen that leaves the
+    // rest of the frame to the cursor, scrolling and menus, which still run at the full refresh rate.
+    const dt = t - prevT;
+    if (prevT && dt < 13.5) return;
+    f = Math.min(prevT ? dt : 16.7, 50) / 16.67; prevT = t;
+    const e = 1 - Math.exp(-f * .05);
+    sx += (mx - sx) * e; sy += (my - sy) * e; lastT = t;
+    pick()(t);
   }
-  function start() { if (!running && !paused && !reduced) { running = true; requestAnimationFrame(frame); } }
+  function start() { if (!running && !paused && !reduced) { running = true; prevT = 0; requestAnimationFrame(frame); } }
   addEventListener("resize", () => { if (paused || reduced) requestAnimationFrame(still); });
   window.BGFX = { setPaused(p) { paused = p; p ? requestAnimationFrame(still) : start(); } };
   reduced ? requestAnimationFrame(still) : start();

@@ -462,6 +462,15 @@ body.booting .pane{transform:translateX(0) skewX(-14deg)}
 /* ---------- sprite cursor ---------- */
 #cursor{position:fixed;left:0;top:0;width:48px;height:48px;display:none;pointer-events:none;z-index:9999;background:url(../assets/cursors/normal.png) 0 0/auto 48px no-repeat}
 #cursor.link{background-image:url(../assets/cursors/link.png)}
+#cursor-fx{position:fixed;inset:0;pointer-events:none;z-index:9998;display:none;overflow:hidden}
+#cursor-fx i{position:fixed;left:0;top:0;display:block;will-change:transform}
+.c-dot{width:14px;height:14px;background:var(--red-hi);box-shadow:0 0 0 1px var(--black)}
+.c-dot.alt{background:#fff}
+.c-ring{width:44px;height:44px;border:2px solid var(--red-hi);transform-origin:center;opacity:0;rotate:45deg;transition:opacity .2s,width .25s var(--back),height .25s var(--back),border-color .2s}
+.c-ring.open{opacity:.9;width:56px;height:56px}
+.c-ring.press{width:30px;height:30px;border-color:#fff}
+.c-burst{width:22px;height:4px;background:var(--red-hi);transform-origin:left center}
+.c-burst.alt{background:#fff;height:2px}
 
 @media(max-width:820px){
   :root{--hud:3.2rem}

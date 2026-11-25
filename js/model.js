@@ -3,7 +3,7 @@ const Model = {
   githubUser: "KCarnage1",
   contactEmail: "rajesholbis@gmail.com",   // contact form target (formsubmit.co relay)
 
-  state: { project: 0, skillGroup: 0, skill: 0, screen: "home", menuIndex: 0, reposLoaded: false, skillsBuilt: false, aboutBuilt: false, projectsBuilt: false, filter: "all", modal: -1, motion: true },
+  state: { project: 0, skillGroup: 0, skill: 0, screen: "home", menuIndex: 0, reposLoaded: false, skillsBuilt: false, aboutBuilt: false, projectsBuilt: false, filter: "all", modal: -1, motion: true, theme: "p5" },
   screens: ["home", "projects", "skills", "about", "contact"],
   sections: ["projects", "skills", "about", "contact"],
   captions: {
@@ -224,6 +224,11 @@ const Model = {
   ],
 
   // The playlist. Add a song by dropping the file in assets/music/ and adding a line here.
+  themes: [
+    { id: "p5", name: "Persona 5", short: "P5", color: "#e60012" },
+    { id: "p5r", name: "Persona 5 Royal", short: "P5R", color: "#e60012" },
+    { id: "p3r", name: "Persona 3 Reload", short: "P3R", color: "#2160f0" },
+  ],
   music: [
     { title: "Beneath the Mask", artist: "Persona soundtrack", src: "assets/music/beneath-the-mask.mp3" },
     { title: "Last Surprise", artist: "Persona soundtrack", src: "assets/music/last-surprise.mp3" },

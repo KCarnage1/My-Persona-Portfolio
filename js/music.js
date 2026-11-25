@@ -240,6 +240,7 @@ const Music = {
     const c = this.viz, ctx = c.getContext("2d"), w = c.width, h = c.height;
     ctx.clearRect(0, 0, w, h);
     const live = this.open && this.playing && this.an && !this.reduced && !document.hidden;
+    const cs = getComputedStyle(document.documentElement), lo = cs.getPropertyValue("--red").trim() || "#e60012", hi = document.documentElement.dataset.theme === "p5r" ? "#ffc61a" : "#ffffff";
     const n = 16, gap = 4, bw = (w - gap * (n - 1)) / n;
     const frame = () => {
       ctx.clearRect(0, 0, w, h);
@@ -247,7 +248,7 @@ const Music = {
       for (let i = 0; i < n; i++) {
         const v = live ? this.data[Math.min(this.data.length - 1, Math.floor(i * 1.6))] / 255 : 0.04;
         const bh = Math.max(3, v * h);
-        ctx.fillStyle = i % 5 === 2 ? "#ffffff" : "#e60012";
+        ctx.fillStyle = i % 5 === 2 ? hi : lo;
         ctx.fillRect(i * (bw + gap), h - bh, bw, bh);
       }
       if (live && this.open && this.playing) this.raf = requestAnimationFrame(frame);

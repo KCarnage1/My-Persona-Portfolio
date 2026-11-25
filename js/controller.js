@@ -11,6 +11,7 @@ const Controller = {
     View.init();
     this.sound = Model.pref("sound", true); View.setSound(this.sound);
     Music.init();
+    Model.state.theme = Model.pref("theme", "p5"); View.setTheme(Model.state.theme);
     Model.state.motion = Model.pref("motion", true); View.setMotion(Model.state.motion);
     this.bindMenu(); this.bindKeyboard(); this.bindAudio(); this.bindContactForm(); this.bindProjects();
     this.bindOverlays(); this.bindScroll(); this.bindPalette(); this.bindSkills();
@@ -226,6 +227,7 @@ const Controller = {
       { label: "Open music player", kind: "Music", keys: "volume seek", run: () => Music.toggleOpen(true) },
       { label: () => (this.sound ? "Turn sound effects off" : "Turn sound effects on"), kind: "Setting", keys: "audio mute clicks", run: () => this.toggleSound() },
       { label: () => (Model.state.motion ? "Pause background animation" : "Play background animation"), kind: "Setting", keys: "motion", run: () => this.toggleMotion() },
+      ...Model.themes.map(t => ({ label: "Look: " + t.name, kind: "Theme", keys: "theme style skin persona", run: () => this.cycleTheme(t.id) })),
       { label: "Keyboard controls", kind: "Help", keys: "shortcuts", run: () => this.openHelp() },
     ];
   },
@@ -274,6 +276,7 @@ const Controller = {
     document.getElementById("help-btn").addEventListener("click", () => this.openHelp());
     View.els.soundBtn.addEventListener("click", () => this.toggleSound());
     View.els.motionBtn.addEventListener("click", () => this.toggleMotion());
+    document.getElementById("theme-btn").addEventListener("click", () => this.cycleTheme());
     // keep Tab inside an open dialog
     [View.els.modal, View.els.help, View.els.palette].forEach(o => o.addEventListener("keydown", e => {
       if (e.key !== "Tab") return;
@@ -298,6 +301,15 @@ const Controller = {
   toggleSound() {
     this.sound = !this.sound; Model.setPref("sound", this.sound); View.setSound(this.sound);
     View.toast(this.sound ? "Sound effects on" : "Sound effects off"); this.play();
+  },
+  cycleTheme(to) {
+    if (this.transitioning) return;
+    const cur = Model.themes.findIndex(t => t.id === Model.state.theme);
+    const next = to || Model.themes[(cur + 1) % Model.themes.length].id;
+    if (next === Model.state.theme) return;
+    const name = Model.themes.find(t => t.id === next).name;
+    this.transitioning = true;
+    View.wipe(name.toUpperCase(), "Theme", 1, () => { Model.state.theme = next; Model.setPref("theme", next); View.setTheme(next); }, () => { this.transitioning = false; View.toast("Look: " + name); this.play(); });
   },
   toggleMotion() {
     Model.state.motion = !Model.state.motion; Model.setPref("motion", Model.state.motion); View.setMotion(Model.state.motion);
@@ -341,6 +353,7 @@ const Controller = {
       if (k === "]") { Music.go(1); return; }
       if (k === "[") { Music.go(-1); return; }
       if (k === "Escape" && Music.open) { Music.toggleOpen(false); return; }
+      if (k === "t" || k === "T") { this.cycleTheme(); return; }
       if (k === "b" || k === "B") { this.toggleMotion(); return; }
       if (k >= "1" && k <= "4") { this.go(Model.sections[+k - 1]); return; }
 

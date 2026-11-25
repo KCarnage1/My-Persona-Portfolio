@@ -1,23 +1,31 @@
-/* BGFX: animated Persona-style wallpapers, one scene per screen, drawn on a canvas (no video files).
-   home: moon + clock ring · projects: Dark Hour · skills: Velvet Room · about: red and black slashes + star · contact: red rays + banners */
+/* BGFX: animated Persona-style wallpapers drawn on a canvas (no video files). One scene per screen, in three themes:
+   p5  Persona 5: red and black slashes, a turning star, rays and banners
+   p5r Persona 5 Royal: the same cut-up look in warm black with gold glints and a gold star
+   p3r Persona 3 Reload: deep blue, the moon, a clock ring, glass slabs and the Dark Hour / Velvet Room scenes */
 (() => {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches, R = Math.random, TAU = Math.PI * 2;
   const bg = document.getElementById("bg"), c = document.createElement("canvas"), ctx = c.getContext("2d");
   c.id = "bgfx"; c.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block";
   bg.insertBefore(c, bg.firstChild); document.body.classList.add("fx");
   let W, H, m, mx = 0, my = 0, sx = 0, sy = 0, scene = document.body.dataset.screen || "home";
+  const theme = () => document.documentElement.dataset.theme || "p5";
 
   const shards = Array.from({ length: 46 }, () => ({ x: R(), y: R(), s: 8 + R() * 38, r: R() * TAU, vr: (R() - .5) * .006, v: .00006 + R() * .00022, d: .3 + R() * 1.1, a: .12 + R() * .35 }));
   const coffins = Array.from({ length: 16 }, () => ({ x: R(), y: R(), s: m || 90 + R() * 90, r: (R() - .5) * .5, v: .00004 + R() * .00009, d: .3 + R() * 1.2, p: R() * 9 }));
   const cards = Array.from({ length: 14 }, (_, i) => ({ p: R() * TAU, r: .25 + R() * .75, dir: i % 2 ? 1 : -1, w: .6 + R() * .6 }));
+  const glints = Array.from({ length: 16 }, () => ({ x: R(), y: R(), s: 8 + R() * 16, p: R() * 9, v: .0004 + R() * .0006 }));
 
   const resize = () => { const k = Math.min(devicePixelRatio || 1, 1.5); W = c.width = innerWidth * k; H = c.height = innerHeight * k; m = Math.min(W, H); };
   addEventListener("resize", resize); resize();
   addEventListener("mousemove", e => { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; }, { passive: true });
   let paused = false, lastT = 0, running = false;
-  new MutationObserver(() => { scene = document.body.dataset.screen; if (reduced || paused) requestAnimationFrame(still); }).observe(document.body, { attributes: true, attributeFilter: ["data-screen"] });
+  const redrawStill = () => { if (reduced || paused) requestAnimationFrame(still); };
+  new MutationObserver(() => { scene = document.body.dataset.screen; redrawStill(); }).observe(document.body, { attributes: true, attributeFilter: ["data-screen"] });
+  new MutationObserver(redrawStill).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
+  /* ---------- drawing helpers ---------- */
   const fill = stops => { const g = ctx.createLinearGradient(0, 0, 0, H); stops.forEach((s, i) => g.addColorStop(i / (stops.length - 1), s)); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
+  const diag = stops => { const g = ctx.createLinearGradient(0, 0, W, H); stops.forEach((s, i) => g.addColorStop(i / (stops.length - 1), s)); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
   const glow = (x, y, r, rgb, a) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); };
   const disc = (x, y, r, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); };
   function drawShards(rgb, line) {
@@ -28,11 +36,24 @@
       ctx.beginPath(); ctx.moveTo(-s.s, -s.s * .3); ctx.lineTo(s.s * .2, -s.s * .8); ctx.lineTo(s.s, s.s * .4); ctx.lineTo(-s.s * .4, s.s * .7); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
     });
   }
+  function ring(cx, cy, r, rot, rgb, ticks) {
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.strokeStyle = `rgba(${rgb},.3)`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, r * .9, 0, TAU); ctx.stroke();
+    for (let i = 0; i < ticks; i++) { ctx.save(); ctx.rotate(i * TAU / ticks); ctx.lineWidth = i % 3 ? 3 : 9; ctx.beginPath(); ctx.moveTo(r * .9, 0); ctx.lineTo(r * (i % 3 ? .96 : 1.04), 0); ctx.stroke(); ctx.restore(); }
+    ctx.restore();
+  }
   // five-pointed star, the Phantom Thieves' mark
   function star(cx, cy, r, rot) {
     ctx.beginPath();
     for (let i = 0; i < 10; i++) { const a = rot + i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? r * .382 : r; ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
     ctx.closePath();
+  }
+  // four-point glint
+  function glint(x, y, s) {
+    ctx.beginPath(); ctx.moveTo(x, y - s); ctx.quadraticCurveTo(x, y, x + s * .5, y); ctx.quadraticCurveTo(x, y, x, y + s); ctx.quadraticCurveTo(x, y, x - s * .5, y); ctx.quadraticCurveTo(x, y, x, y - s); ctx.closePath();
+  }
+  function drawGlints(t, rgb) {
+    glints.forEach(g => { const k = (Math.sin(t * g.v + g.p) + 1) / 2; ctx.fillStyle = `rgba(${rgb},${.15 + k * .75})`; glint(g.x * W - sx * 50, g.y * H - sy * 35, g.s * (.5 + k)); ctx.fill(); });
   }
   // a tilted strip of repeating text that scrolls sideways
   function band(y, tilt, bg, fg, text, scroll) {
@@ -44,14 +65,99 @@
     for (let x = -W - off; x < W; x += unit) ctx.fillText(text, x, 2);
     ctx.restore();
   }
-  function ring(cx, cy, r, rot, rgb, ticks) {
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.strokeStyle = `rgba(${rgb},.3)`; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, r * .9, 0, TAU); ctx.stroke();
-    for (let i = 0; i < ticks; i++) { ctx.save(); ctx.rotate(i * TAU / ticks); ctx.lineWidth = i % 3 ? 3 : 9; ctx.beginPath(); ctx.moveTo(r * .9, 0); ctx.lineTo(r * (i % 3 ? .96 : 1.04), 0); ctx.stroke(); ctx.restore(); }
-    ctx.restore();
+  // slanted slabs that slide slowly
+  function slashes(cols, n, t, spread, lean) {
+    for (let i = 0; i < n; i++) {
+      const off = Math.sin(t / 9000 + i * 1.9) * W * .02 - sx * 40 * (1 + i * .25), x0 = W * (i * spread - .1) + off, w = W * (.07 + (i % 3) * .05);
+      ctx.fillStyle = cols[i % cols.length];
+      ctx.beginPath(); ctx.moveTo(x0 + lean, 0); ctx.lineTo(x0 + lean + w, 0); ctx.lineTo(x0 + w, H); ctx.lineTo(x0, H); ctx.closePath(); ctx.fill();
+    }
+  }
+  function thin(col, xs, t, lean) {
+    ctx.fillStyle = col;
+    xs.forEach((x, i) => { const x0 = W * x - sx * 60 + Math.sin(t / 7000 + i) * W * .015; ctx.beginPath(); ctx.moveTo(x0 + lean, 0); ctx.lineTo(x0 + lean + 5, 0); ctx.lineTo(x0 + 5, H); ctx.lineTo(x0, H); ctx.closePath(); ctx.fill(); });
+  }
+  function emblem(cx, cy, r, t, line, inner) {
+    star(cx, cy, r, t / 20000); ctx.fillStyle = "#000"; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = line; ctx.stroke();
+    star(cx, cy, r * .56, -t / 14000); ctx.fillStyle = inner; ctx.fill();
+  }
+  // a wheel of broken arcs, like a turning gear
+  function wheel(cx, cy, r, t, colA, colB) {
+    for (let k = 0; k < 3; k++) {
+      const rr = r * (1 - k * .24), segs = 7 + k * 2, dir = k % 2 ? -1 : 1, rot = t / (16000 + k * 6000) * dir;
+      ctx.lineWidth = r * .1; ctx.strokeStyle = k % 2 ? colB : colA;
+      for (let i = 0; i < segs; i++) { const a = rot + i * TAU / segs; ctx.beginPath(); ctx.arc(cx, cy, rr, a, a + TAU / segs * .62); ctx.stroke(); }
+    }
+  }
+  function orbitCards(cx, cy, t, fillCol, lineCol) {
+    cards.forEach(k => {
+      const a = t / 9000 * k.dir + k.p, r = m * (.2 + k.r * .5), x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r * .55;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a * .5); const w = m * .05 * k.w, h = w * 1.5;
+      ctx.fillStyle = fillCol; ctx.strokeStyle = lineCol; ctx.lineWidth = 2; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.strokeRect(-w / 2, -h / 2, w, h); ctx.restore();
+    });
+  }
+  function rays(cx, cy, t, cols, vignette) {
+    const far = Math.hypot(W, H), n = 26, rot = t / 45000;
+    for (let i = 0; i < n; i += 2) {
+      ctx.fillStyle = cols[(i / 2) % cols.length];
+      const a0 = rot + i * TAU / n, a1 = a0 + TAU / n;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a0) * far, cy + Math.sin(a0) * far); ctx.lineTo(cx + Math.cos(a1) * far, cy + Math.sin(a1) * far); ctx.closePath(); ctx.fill();
+    }
+    const v = ctx.createRadialGradient(cx, cy, m * .12, cx, cy, far * .7); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, vignette);
+    ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
   }
 
-  const scenes = {
+  /* ---------- Persona 5 and Persona 5 Royal: one set of scenes, two palettes ---------- */
+  const slashScenes = pal => ({
+    home(t) {      // slashes, a star and a clock ring
+      diag(pal.base); slashes(pal.slashes, 3, t, .34, H * .55); thin(pal.line, [.46], t, H * .55);
+      emblem(W * .8 - sx * 60, H * .3 - sy * 40, m * .3, t, pal.line, pal.inner);
+      ring(W * .26 - sx * 70, H * .64 - sy * 50, m * .56, t / 60000, pal.ring, 12);
+      drawShards(pal.shard, pal.shard); if (pal.glint) drawGlints(t, pal.glint);
+    },
+    projects(t) {  // a turning wheel, like Mementos
+      diag(pal.base); slashes(pal.slashes, 2, t, .5, H * .4);
+      wheel(W * .3 - sx * 40, H * .58 - sy * 30, m * .52, t, pal.wheelA, pal.wheelB);
+      star(W * .3 - sx * 40, H * .58 - sy * 30, m * .13, t / 12000); ctx.fillStyle = pal.inner; ctx.fill();
+      drawShards(pal.shard, pal.shard); if (pal.glint) drawGlints(t, pal.glint);
+    },
+    skills(t) {    // a star in a ring, with cards orbiting it
+      diag(pal.base); slashes(pal.slashes, 2, t, .6, H * .3);
+      const cx = W * .7 - sx * 50, cy = H * .5 - sy * 30;
+      ring(cx, cy, m * .5, t / 30000, pal.ring, 24);
+      emblem(cx, cy, m * .22, t, pal.line, pal.inner);
+      orbitCards(cx, cy, t, pal.cardFill, pal.cardLine);
+      drawShards(pal.shard, pal.shard); if (pal.glint) drawGlints(t, pal.glint);
+    },
+    about(t) {     // slashes with a big turning star
+      diag(pal.base); slashes(pal.slashes, 5, t, .24, H * .55); thin(pal.line, [.18, .68], t, H * .55);
+      emblem(W * .8 - sx * 70, H * .72 - sy * 50, m * .46, t, pal.line, pal.inner);
+      drawShards(pal.shard, pal.shard); if (pal.glint) drawGlints(t, pal.glint);
+    },
+    contact(t) {   // rays from behind the card, with scrolling banners
+      fill(pal.contactBase);
+      rays(W * .7 - sx * 50, H * .5 - sy * 30, t, pal.rays, "rgba(0,0,0,.88)");
+      band(H * .76, -.08, "#fff", "#000", "SAY HELLO  //  GET IN TOUCH  //  ", t * .05);
+      band(H * .9, -.05, pal.bandB, pal.bandInk, "TAKE YOUR TIME  //  ", -t * .04);
+      drawShards(pal.shard, pal.shard); if (pal.glint) drawGlints(t, pal.glint);
+    },
+  });
+
+  const p5 = slashScenes({
+    base: ["#050002", "#1c0005", "#4a0008"], contactBase: ["#000", "#12000a", "#000"], slashes: ["#a8000e", "#e60012"],
+    line: "rgba(255,255,255,.9)", inner: "#e60012", ring: "255,255,255", shard: "255,255,255", glint: null,
+    wheelA: "#e60012", wheelB: "#ffffff", cardFill: "rgba(230,0,18,.3)", cardLine: "rgba(255,255,255,.8)",
+    rays: ["#c70012"], bandB: "#e60012", bandInk: "#000",
+  });
+  const p5r = slashScenes({
+    base: ["#070500", "#1d1203", "#4a0a06"], contactBase: ["#000", "#130b00", "#000"], slashes: ["#8f0012", "#d4001a"],
+    line: "rgba(255,206,60,.95)", inner: "#ffc61a", ring: "255,206,60", shard: "255,226,140", glint: "255,214,90",
+    wheelA: "#d4001a", wheelB: "#ffc61a", cardFill: "rgba(255,198,26,.22)", cardLine: "rgba(255,226,140,.85)",
+    rays: ["#b8000f", "#d9a400"], bandB: "#ffc61a", bandInk: "#000",
+  });
+
+  /* ---------- Persona 3 Reload: the moon, the clock, the Dark Hour, the Velvet Room ---------- */
+  const p3r = {
     home(t) {
       fill(["#010512", "#05235e", "#0a4ab8"]);
       // the moon shows today's real phase (same maths as the home-screen calendar)
@@ -63,7 +169,7 @@
       ring(W * .28 - sx * 70, H * .62 - sy * 50, m * .62, t / 60000, "160,235,255", 12);
       drawShards("120,215,255", "220,250,255");
     },
-    projects(t) {   // Dark Hour
+    projects(t) {  // the Dark Hour
       fill(["#010a07", "#06352a", "#0c6b4f"]);
       const x = W * .5 - sx * 30, y = H * .36 - sy * 20;
       glow(x, y, m * .6, "140,255,200", .35); disc(x, y, m * .2, "#c9ffe6"); disc(x + m * .03, y - m * .02, m * .19, "rgba(6,53,42,.35)");
@@ -76,56 +182,44 @@
       });
       drawShards("110,255,190", "200,255,230");
     },
-    skills(t) {     // Velvet Room
+    skills(t) {    // the Velvet Room
       fill(["#04021a", "#14126b", "#3a2aa8"]);
       const cx = W * .68 - sx * 50, cy = H * .5 - sy * 30; glow(cx, cy, m * .8, "120,100,255", .3);
       for (let k = 0; k < 4; k++) { ctx.setLineDash([m * .02, m * .03]); ring(cx, cy, m * (.2 + k * .14), t / (15000 + k * 8000) * (k % 2 ? -1 : 1), "190,170,255", 0); }
       ctx.setLineDash([]);
-      cards.forEach(k => {
-        const a = t / 9000 * k.dir + k.p, r = m * (.2 + k.r * .5), x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r * .55;
-        ctx.save(); ctx.translate(x, y); ctx.rotate(a * .5); const w = m * .05 * k.w, h = w * 1.5;
-        ctx.fillStyle = "rgba(120,100,255,.25)"; ctx.strokeStyle = "rgba(215,200,255,.7)"; ctx.lineWidth = 2; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.strokeRect(-w / 2, -h / 2, w, h); ctx.restore();
-      });
+      orbitCards(cx, cy, t, "rgba(120,100,255,.25)", "rgba(215,200,255,.7)");
       drawShards("150,130,255", "225,215,255");
     },
-    about(t) {      // red and black slashes with a turning star
-      const g = ctx.createLinearGradient(0, 0, W, H); g.addColorStop(0, "#050002"); g.addColorStop(.5, "#1c0005"); g.addColorStop(1, "#4a0008");
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      const lean = H * .55;
-      for (let i = 0; i < 5; i++) {
-        const off = Math.sin(t / 9000 + i * 1.9) * W * .02 - sx * 40 * (1 + i * .25), x0 = W * (i * .24 - .1) + off, w = W * (.07 + (i % 3) * .05);
-        ctx.fillStyle = i % 2 ? "#e60012" : "#a8000e";
-        ctx.beginPath(); ctx.moveTo(x0 + lean, 0); ctx.lineTo(x0 + lean + w, 0); ctx.lineTo(x0 + w, H); ctx.lineTo(x0, H); ctx.closePath(); ctx.fill();
+    about(t) {     // blue glass slabs around a big clock ring
+      diag(["#020b24", "#08306f", "#1456c4"]);
+      glow(W * .22 - sx * 30, H * .25 - sy * 20, m * .5, "120,200,255", .3);
+      for (let i = 0; i < 4; i++) {
+        const x0 = W * (.08 + i * .26) + Math.sin(t / 8000 + i * 1.6) * W * .02 - sx * 40, w = W * .16, lean = H * .45;
+        ctx.fillStyle = "rgba(90,170,255,.12)"; ctx.strokeStyle = "rgba(190,225,255,.4)"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x0 + lean, 0); ctx.lineTo(x0 + lean + w, 0); ctx.lineTo(x0 + w, H); ctx.lineTo(x0, H); ctx.closePath(); ctx.fill(); ctx.stroke();
       }
-      ctx.fillStyle = "rgba(255,255,255,.9)";
-      for (let i = 0; i < 2; i++) { const x0 = W * (.18 + i * .5) - sx * 60 + Math.sin(t / 7000 + i) * W * .015; ctx.beginPath(); ctx.moveTo(x0 + lean, 0); ctx.lineTo(x0 + lean + 5, 0); ctx.lineTo(x0 + 5, H); ctx.lineTo(x0, H); ctx.closePath(); ctx.fill(); }
-      const cx = W * .8 - sx * 70, cy = H * .72 - sy * 50;
-      star(cx, cy, m * .46, t / 20000); ctx.fillStyle = "#000"; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = "#fff"; ctx.stroke();
-      star(cx, cy, m * .26, -t / 14000); ctx.fillStyle = "#e60012"; ctx.fill();
-      drawShards("255,255,255", "255,255,255");
+      ring(W * .8 - sx * 60, H * .72 - sy * 40, m * .62, t / 50000, "170,220,255", 24);
+      ring(W * .8 - sx * 60, H * .72 - sy * 40, m * .36, -t / 40000, "170,220,255", 12);
+      drawShards("120,200,255", "220,245,255");
     },
-    contact(t) {    // red rays bursting from behind the card, with scrolling banners
-      fill(["#000", "#12000a", "#000"]);
-      const cx = W * .7 - sx * 50, cy = H * .5 - sy * 30, far = Math.hypot(W, H), n = 26, rot = t / 45000;
-      ctx.fillStyle = "#c70012";
-      for (let i = 0; i < n; i += 2) {
-        const a0 = rot + i * TAU / n, a1 = a0 + TAU / n;
-        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a0) * far, cy + Math.sin(a0) * far); ctx.lineTo(cx + Math.cos(a1) * far, cy + Math.sin(a1) * far); ctx.closePath(); ctx.fill();
-      }
-      const v = ctx.createRadialGradient(cx, cy, m * .12, cx, cy, far * .7); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.88)");
-      ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
-      band(H * .76, -.08, "#fff", "#000", "SAY HELLO  //  GET IN TOUCH  //  ", t * .05);
-      band(H * .9, -.05, "#e60012", "#000", "TAKE YOUR TIME  //  ", -t * .04);
-      drawShards("255,255,255", "255,255,255");
+    contact(t) {   // blue rays from behind the card, with scrolling banners
+      fill(["#010612", "#04153a", "#010612"]);
+      rays(W * .7 - sx * 50, H * .5 - sy * 30, t, ["#1456c4", "#0a2f78"], "rgba(1,6,20,.88)");
+      band(H * .76, -.08, "#eaf4ff", "#04122f", "SAY HELLO  //  GET IN TOUCH  //  ", t * .05);
+      band(H * .9, -.05, "#2160f0", "#fff", "TAKE YOUR TIME  //  ", -t * .04);
+      drawShards("120,200,255", "220,245,255");
     },
   };
 
+  const scenes = { p5, p5r, p3r };
+  const pick = () => { const set = scenes[theme()] || p5; return set[scene] || set.home; };
+
   // one static frame: used for reduced motion and when the visitor pauses the background
-  function still() { (scenes[scene] || scenes.home)(lastT); }
+  function still() { pick()(lastT); }
   function frame(t) {
     if (paused || reduced) { running = false; return; }
     sx += (mx - sx) * .05; sy += (my - sy) * .05; lastT = t;
-    (scenes[scene] || scenes.home)(t);
+    pick()(t);
     requestAnimationFrame(frame);
   }
   function start() { if (!running && !paused && !reduced) { running = true; requestAnimationFrame(frame); } }

@@ -6,6 +6,7 @@
 <title>Portfolio · Cloud Engineering / IT</title>
 <meta name="description" content="Portfolio of an IT undergraduate focused on software development and cloud engineering: web apps, a desktop game, a game mod, skills and contact.">
 <meta name="theme-color" content="#e60012">
+<script>try{var t=JSON.parse(localStorage.getItem("pf:theme"));if(t==="p5r"||t==="p3r")document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="canonical" href="https://kcarnage1.github.io/My-Persona-Portfolio/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://kcarnage1.github.io/My-Persona-Portfolio/">
@@ -20,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=20261125f">
+<link rel="stylesheet" href="css/style.css?v=20261125g">
 </head>
 <body data-screen="home" class="booting">
 
@@ -54,6 +55,7 @@
     <div class="hud-actions">
       <button class="icon-btn" id="music-btn" aria-expanded="false" aria-controls="player" title="Music (P plays or pauses)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg><span class="sr-only">Music player</span></button>
       <button class="icon-btn" id="palette-btn" title="Quick jump (/)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l5.5 5.5"/></svg><span class="sr-only">Quick jump</span></button>
+      <button class="icon-btn" id="theme-btn" title="Switch look: Persona 5 / Royal / 3 Reload (T)"><span aria-hidden="true">P5</span><span class="sr-only">Switch theme. Current: Persona 5</span></button>
       <button class="icon-btn" id="motion-toggle" aria-pressed="true" title="Background animation (B)"><svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5h3v14H8zM13 5h3v14h-3z"/></svg><svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg><span class="sr-only">Background animation</span></button>
       <button class="icon-btn" id="sound-toggle" aria-pressed="true" title="Sound effects (M)"><svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12"/></svg><svg class="off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 9l5 6M21 9l-5 6"/></svg><span class="sr-only">Sound effects</span></button>
       <button class="icon-btn" id="help-btn" title="Keyboard controls (?)"><span aria-hidden="true">?</span><span class="sr-only">Keyboard controls</span></button>
@@ -225,6 +227,7 @@
       <dt><span class="key">/</span></dt><dd>Quick jump to any section, project or action</dd>
       <dt><span class="key">Esc</span></dt><dd>Close a window, or go back to the menu</dd>
       <dt><span class="key">←</span><span class="key">→</span></dt><dd>Previous / next project while one is open</dd>
+      <dt><span class="key">T</span></dt><dd>Switch look: Persona 5, Persona 5 Royal, Persona 3 Reload</dd>
       <dt><span class="key">P</span></dt><dd>Play or pause the music</dd>
       <dt><span class="key">[</span><span class="key">]</span></dt><dd>Previous / next song</dd>
       <dt><span class="key">M</span></dt><dd>Sound effects on / off</dd>
@@ -240,10 +243,10 @@
 
 <script src="js/vendor/gsap.min.js" defer></script>
 <script src="js/vendor/ScrollTrigger.min.js" defer></script>
-<script src="js/bgfx.js?v=20261125f" defer></script>
-<script src="js/model.js?v=20261125f" defer></script>
-<script src="js/view.js?v=20261125f" defer></script>
-<script src="js/music.js?v=20261125f" defer></script>
-<script src="js/controller.js?v=20261125f" defer></script>
+<script src="js/bgfx.js?v=20261125g" defer></script>
+<script src="js/model.js?v=20261125g" defer></script>
+<script src="js/view.js?v=20261125g" defer></script>
+<script src="js/music.js?v=20261125g" defer></script>
+<script src="js/controller.js?v=20261125g" defer></script>
 </body>
 </html>

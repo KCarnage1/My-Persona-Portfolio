@@ -149,6 +149,14 @@ const View = {
 
   playSelect() { try { this.els.sfx.currentTime = 0; const p = this.els.sfx.play(); p && p.catch && p.catch(() => {}); } catch {} },
   setSound(on) { this.els.soundBtn.setAttribute("aria-pressed", on); },
+  setTheme(id) {
+    const t = Model.themes.find(x => x.id === id) || Model.themes[0];
+    if (t.id === "p5") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t.id;
+    const b = document.getElementById("theme-btn");
+    if (b) { b.firstElementChild.textContent = t.short; b.lastElementChild.textContent = "Switch theme. Current: " + t.name; }
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t.color;
+    window.Music && Music.draw && Music.draw();
+  },
   setMotion(on) { this.els.motionBtn.setAttribute("aria-pressed", on); window.BGFX && window.BGFX.setPaused(!on); },
 
   toast(msg) {

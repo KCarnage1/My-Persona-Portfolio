@@ -8,7 +8,14 @@
    env = { reduced, raf, makeLayer(w, h) } */
 function createBgfx(c, env) {
   const reduced = env.reduced, requestAnimationFrame = env.raf, R = Math.random, TAU = Math.PI * 2;
-  const ctx = c.getContext("2d", { alpha: false });
+  // On wide-gamut (Display P3) screens such as Mac and OLED displays the canvas is created in P3, and the main accents are given
+  // as P3 colours, so the reds and blues use the screen's full range instead of being limited to sRGB.
+  let ctx = null;
+  if (env.p3) { try { ctx = c.getContext("2d", { alpha: false, colorSpace: "display-p3" }); } catch { ctx = null; } }
+  if (!ctx) ctx = c.getContext("2d", { alpha: false });
+  const wide = !!env.p3 && ctx.getContextAttributes && ctx.getContextAttributes().colorSpace === "display-p3";
+  const WIDE = { "#e60012": "color(display-p3 .93 0 .08)", "#a8000e": "color(display-p3 .66 0 .06)", "#c70012": "color(display-p3 .8 0 .08)", "#d4001a": "color(display-p3 .85 0 .1)", "#8f0012": "color(display-p3 .57 0 .07)", "#b8000f": "color(display-p3 .72 0 .07)", "#ffc61a": "color(display-p3 1 .78 .1)", "#d9a400": "color(display-p3 .86 .65 .02)", "#2160f0": "color(display-p3 .12 .38 .98)", "#1456c4": "color(display-p3 .07 .33 .8)" };
+  const wideHex = hex => (wide && WIDE[hex]) || hex;
   let W = 2, H = 2, m = 2, mx = 0, my = 0, sx = 0, sy = 0, scene = "home", themeId = "p5";
   const theme = () => themeId;
 
@@ -23,10 +30,19 @@ function createBgfx(c, env) {
   /* ---------- drawing helpers ---------- */
   // Static gradients are painted once into an offscreen canvas and then blitted, which is far cheaper than rebuilding a
   // gradient every frame and avoids the garbage that causes small stutters.
+  // Dark gradients show visible bands on OLED screens (8 bits is too few steps for a slow fade to black), so a little noise of
+  // plus or minus one or two levels is added to each static layer once. It is invisible as noise but breaks the bands up.
+  const dither = g => {
+    try {
+      const img = g.getImageData(0, 0, W, H), d = img.data;
+      for (let i = 0; i < d.length; i += 4) { const n = ((Math.random() + Math.random() - 1) * 2.2); d[i] += n; d[i + 1] += n; d[i + 2] += n; }
+      g.putImageData(img, 0, 0);
+    } catch {}
+  };
   const layers = new Map();
   const cached = (key, paint) => {
     key += "|" + W + "x" + H; let l = layers.get(key);
-    if (!l) { if (layers.size > 24) layers.clear(); l = env.makeLayer(W, H); paint(l.getContext("2d")); layers.set(key, l); }
+    if (!l) { if (layers.size > 24) layers.clear(); l = env.makeLayer(W, H); const g = l.getContext("2d"); paint(g); dither(g); layers.set(key, l); }
     ctx.drawImage(l, 0, 0);
   };
   const lin = (g, x1, y1, x2, y2, stops) => { const gr = g.createLinearGradient(x1, y1, x2, y2); stops.forEach((st, i) => gr.addColorStop(i / (stops.length - 1), st)); g.fillStyle = gr; g.fillRect(0, 0, W, H); };
@@ -156,22 +172,22 @@ function createBgfx(c, env) {
   });
 
   const p5 = slashScenes({
-    base: ["#050002", "#1c0005", "#4a0008"], contactBase: ["#000", "#12000a", "#000"], slashes: ["#a8000e", "#e60012"],
-    line: "rgba(255,255,255,.9)", inner: "#e60012", ring: "255,255,255", shard: "255,255,255", glint: null,
-    wheelA: "#e60012", wheelB: "#ffffff", cardFill: "rgba(230,0,18,.3)", cardLine: "rgba(255,255,255,.8)",
-    rays: ["#c70012"], bandB: "#e60012", bandInk: "#000",
+    base: ["#000", "#1c0005", "#4a0008"], contactBase: ["#000", "#12000a", "#000"], slashes: [wideHex("#a8000e"), wideHex("#e60012")],
+    line: "rgba(255,255,255,.9)", inner: wideHex("#e60012"), ring: "255,255,255", shard: "255,255,255", glint: null,
+    wheelA: wideHex("#e60012"), wheelB: "#ffffff", cardFill: "rgba(230,0,18,.3)", cardLine: "rgba(255,255,255,.8)",
+    rays: [wideHex("#c70012")], bandB: wideHex("#e60012"), bandInk: "#000",
   });
   const p5r = slashScenes({
-    base: ["#070500", "#1d1203", "#4a0a06"], contactBase: ["#000", "#130b00", "#000"], slashes: ["#8f0012", "#d4001a"],
-    line: "rgba(255,206,60,.95)", inner: "#ffc61a", ring: "255,206,60", shard: "255,226,140", glint: "255,214,90",
-    wheelA: "#d4001a", wheelB: "#ffc61a", cardFill: "rgba(255,198,26,.22)", cardLine: "rgba(255,226,140,.85)",
-    rays: ["#b8000f", "#d9a400"], bandB: "#ffc61a", bandInk: "#000",
+    base: ["#000", "#1d1203", "#4a0a06"], contactBase: ["#000", "#130b00", "#000"], slashes: [wideHex("#8f0012"), wideHex("#d4001a")],
+    line: "rgba(255,206,60,.95)", inner: wideHex("#ffc61a"), ring: "255,206,60", shard: "255,226,140", glint: "255,214,90",
+    wheelA: wideHex("#d4001a"), wheelB: wideHex("#ffc61a"), cardFill: "rgba(255,198,26,.22)", cardLine: "rgba(255,226,140,.85)",
+    rays: [wideHex("#b8000f"), wideHex("#d9a400")], bandB: wideHex("#ffc61a"), bandInk: "#000",
   });
 
   /* ---------- Persona 3 Reload: the moon, the clock, the Dark Hour, the Velvet Room ---------- */
   const p3r = {
     home(t) {
-      fill(["#010512", "#05235e", "#0a4ab8"]);
+      fill(["#000", "#05235e", "#0a4ab8"]);
       // the moon shows today's real phase (same maths as the home-screen calendar)
       const x = W * .74 - sx * 40, y = H * .23 - sy * 30, r = m * .13;
       const f = ((((Date.now() - Date.UTC(2000, 0, 6, 18, 14)) / 864e5) % 29.530589) + 29.530589) % 29.530589 / 29.530589;
@@ -182,7 +198,7 @@ function createBgfx(c, env) {
       drawShards("120,215,255", "220,250,255");
     },
     projects(t) {  // the Dark Hour
-      fill(["#010a07", "#06352a", "#0c6b4f"]);
+      fill(["#000", "#06352a", "#0c6b4f"]);
       const x = W * .5 - sx * 30, y = H * .36 - sy * 20;
       glow(x, y, m * .6, "140,255,200", .35); disc(x, y, m * .2, "#c9ffe6"); disc(x + m * .03, y - m * .02, m * .19, "rgba(6,53,42,.35)");
       coffins.forEach(k => {
@@ -195,7 +211,7 @@ function createBgfx(c, env) {
       drawShards("110,255,190", "200,255,230");
     },
     skills(t) {    // the Velvet Room
-      fill(["#04021a", "#14126b", "#3a2aa8"]);
+      fill(["#000", "#14126b", "#3a2aa8"]);
       const cx = W * .68 - sx * 50, cy = H * .5 - sy * 30; glow(cx, cy, m * .8, "120,100,255", .3);
       for (let k = 0; k < 4; k++) { ctx.setLineDash([m * .02, m * .03]); ring(cx, cy, m * (.2 + k * .14), t / (15000 + k * 8000) * (k % 2 ? -1 : 1), "190,170,255", 0); }
       ctx.setLineDash([]);
@@ -203,7 +219,7 @@ function createBgfx(c, env) {
       drawShards("150,130,255", "225,215,255");
     },
     about(t) {     // blue glass slabs around a big clock ring
-      diag(["#020b24", "#08306f", "#1456c4"]);
+      diag(["#000", "#08306f", wideHex("#1456c4")]);
       glow(W * .22 - sx * 30, H * .25 - sy * 20, m * .5, "120,200,255", .3);
       for (let i = 0; i < 4; i++) {
         const x0 = W * (.08 + i * .26) + Math.sin(t / 8000 + i * 1.6) * W * .02 - sx * 40, w = W * .16, lean = H * .45;
@@ -215,10 +231,10 @@ function createBgfx(c, env) {
       drawShards("120,200,255", "220,245,255");
     },
     contact(t) {   // blue rays from behind the card, with scrolling banners
-      fill(["#010612", "#04153a", "#010612"]);
-      rays(W * .7 - sx * 50, H * .5 - sy * 30, t, ["#1456c4", "#0a2f78"], "rgba(1,6,20,.88)");
+      fill(["#000", "#04153a", "#000"]);
+      rays(W * .7 - sx * 50, H * .5 - sy * 30, t, [wideHex("#1456c4"), "#0a2f78"], "rgba(1,6,20,.88)");
       band(H * .76, -.08, "#eaf4ff", "#04122f", "SAY HELLO  //  GET IN TOUCH  //  ", t * .05);
-      band(H * .9, -.05, "#2160f0", "#fff", "TAKE YOUR TIME  //  ", -t * .04);
+      band(H * .9, -.05, wideHex("#2160f0"), "#fff", "TAKE YOUR TIME  //  ", -t * .04);
       drawShards("120,200,255", "220,245,255");
     },
   };
@@ -250,7 +266,7 @@ function createBgfx(c, env) {
   const api = {
     // css size and device pixel ratio of the area to cover
     resize(cssW, cssH, dpr) {
-      let k = Math.min(dpr || 1, 1.5); const px = cssW * cssH * k * k; if (px > 1.3e6) k *= Math.sqrt(1.3e6 / px);   // keep the pixel count sane
+      const cap = env.maxPx || 1.3e6; let k = Math.min(dpr || 1, cap > 2e6 ? 2 : 1.5); const px = cssW * cssH * k * k; if (px > cap) k *= Math.sqrt(cap / px);   // keep the pixel count sane
       W = c.width = Math.max(2, Math.round(cssW * k)); H = c.height = Math.max(2, Math.round(cssH * k)); m = Math.min(W, H);
       if (paused || reduced) requestAnimationFrame(still);
     },

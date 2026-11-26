@@ -18,7 +18,7 @@ self.onmessage = e => {
         return new FontFace("Anton", `url(${u[1]})`).load().then(ff => self.fonts.add(ff));
       }).catch(() => {});
     }
-    api = createBgfx(d.canvas, { reduced: d.reduced, raf, makeLayer: (w, h) => new OffscreenCanvas(w, h) });
+    api = createBgfx(d.canvas, { reduced: d.reduced, p3: d.p3, maxPx: 3.2e6, raf, makeLayer: (w, h) => new OffscreenCanvas(w, h) });
     api.resize(d.w, d.h, d.dpr); api.set(d.scene, d.theme); api.start();
   } else if (!api) return;
   else if (d.type === "resize") api.resize(d.w, d.h, d.dpr);

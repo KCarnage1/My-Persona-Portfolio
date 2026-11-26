@@ -2,7 +2,7 @@
    on an OffscreenCanvas, so it can't stall the page. If the browser can't do that (older browsers, or the page opened straight
    from disk, where workers are blocked), the same code runs on the main thread instead. Scripts load in order: bgfx-core.js first. */
 (() => {
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches, p3 = matchMedia("(color-gamut: p3)").matches;
   const bg = document.getElementById("bg");
   const mk = () => { const c = document.createElement("canvas"); c.id = "bgfx"; c.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block"; return c; };
   let canvas = mk(); bg.insertBefore(canvas, bg.firstChild); document.body.classList.add("fx");
@@ -10,7 +10,7 @@
   let send = () => {}, local = null, mode = "starting";   // one of these is the active backend
 
   function onMain() {
-    mode = "main"; local = createBgfx(canvas, { reduced, raf: f => requestAnimationFrame(f), makeLayer: (w, h) => { const l = document.createElement("canvas"); l.width = w; l.height = h; return l; } });
+    mode = "main"; local = createBgfx(canvas, { reduced, p3, maxPx: 1.3e6, raf: f => requestAnimationFrame(f), makeLayer: (w, h) => { const l = document.createElement("canvas"); l.width = w; l.height = h; return l; } });
     const i = info(); local.resize(i.w, i.h, i.dpr); local.set(i.scene, i.theme); local.start();
     send = d => {
       if (d.type === "resize") local.resize(d.w, d.h, d.dpr); else if (d.type === "mouse") local.mouse(d.x, d.y);
@@ -21,7 +21,7 @@
   function onWorker() {
     let w, done = false;
     const fail = () => { if (done) return; done = true; try { w && w.terminate(); } catch {} onMain(); };
-    try { w = new Worker("js/bgfx-worker.js?v=20261125r"); } catch { fail(); return; }
+    try { w = new Worker("js/bgfx-worker.js?v=20261126a"); } catch { fail(); return; }
     const timer = setTimeout(fail, 1500);
     w.onerror = () => { clearTimeout(timer); fail(); };
     w.onmessage = e => {
@@ -31,7 +31,7 @@
       done = true; mode = "worker";
       const off = canvas.transferControlToOffscreen();
       send = d => w.postMessage(d);
-      w.postMessage({ type: "init", canvas: off, reduced, ...info() }, [off]);
+      w.postMessage({ type: "init", canvas: off, reduced, p3, ...info() }, [off]);
     };
     w.postMessage({ type: "probe" });
   }

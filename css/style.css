@@ -11,6 +11,7 @@
   --gutter:clamp(1rem,5vw,4rem);--hud:3.4rem;--tap:2.2rem;
 }
 /* ---------- themes: Persona 5 is the default; Persona 5 Royal and Persona 3 Reload re-colour the same layout ---------- */
+:root{color-scheme:dark}
 :root[data-theme=p5r]{--blue:#ffc61a;--hard:#ffc61a;--deep:#0d0b05;--panel:rgba(14,11,4,.9);--line:rgba(255,214,90,.22);--paper:#f6f1e1}
 :root[data-theme=p3r]{--red:#2160f0;--red-hi:#8cc4ff;--blue:#5ce1ff;--hard:#2160f0;--accent-rgb:33 96 240;--black:#04122f;--deep:#071a3d;--panel:rgba(5,22,58,.92);--line:rgba(150,196,255,.24);--paper:#eaf2ff;--muted:#aac0e2}
 :root[data-theme=p3r] .ch{transform:none}
@@ -459,6 +460,12 @@ body.booting .pane{transform:translateX(0) skewX(-14deg)}
 #to-top:hover{background:#fff;color:var(--black)}
 #to-top:active{translate:2px 2px}
 
+/* ---------- wide-gamut screens (Mac displays, OLED): the same accents, in Display P3 so they use the screen's full range ---------- */
+@media (color-gamut:p3){
+  :root{--red:color(display-p3 .85 0 .06);--red-hi:color(display-p3 1 .27 .3);--blue:color(display-p3 .2 .82 1)}
+  :root[data-theme=p5r]{--blue:color(display-p3 1 .78 .1);--hard:color(display-p3 1 .78 .1)}
+  :root[data-theme=p3r]{--red:color(display-p3 .12 .38 .98);--red-hi:color(display-p3 .6 .79 1);--blue:color(display-p3 .36 .9 1);--hard:color(display-p3 .12 .38 .98)}
+}
 /* ---------- sprite cursor ---------- */
 #cursor{will-change:transform;position:fixed;left:0;top:0;width:48px;height:48px;display:none;pointer-events:none;z-index:9999;background:url(../assets/cursors/normal.png) 0 0/auto 48px no-repeat}
 #cursor.link{background-image:url(../assets/cursors/link.png)}

@@ -36,6 +36,28 @@ const View = {
     add("js/vendor/gsap.min.js?v=3.12.5").then(() => add("js/vendor/ScrollTrigger.min.js?v=3.12.5")).then(() => { this.gsap = window.gsap; this.gsap.registerPlugin(window.ScrollTrigger); }).catch(() => {});
   },
 
+  // Performance readout (press F, or open the page with ?perf): page frames per second, the slowest recent frame, and what the
+  // wallpaper is doing. Useful for telling whether a stutter is in the page or in the wallpaper.
+  togglePerf(force) {
+    let el = document.getElementById("perf");
+    const on = force === undefined ? !el : force;
+    if (!on) { if (el) { el.remove(); cancelAnimationFrame(this.perfRaf); } return false; }
+    if (el) return true;
+    el = document.createElement("pre"); el.id = "perf"; el.setAttribute("aria-hidden", "true"); document.body.append(el);
+    let last = performance.now(), frames = 0, worst = 0, shown = last;
+    const loop = t => {
+      const dt = t - last; last = t; frames++; if (dt > worst) worst = dt;
+      if (t - shown >= 500) {
+        const fps = Math.round(frames * 1000 / (t - shown)), st = window.BGFX && BGFX.stats();
+        el.textContent = `page  ${fps} fps   worst frame ${worst.toFixed(0)} ms\n` + (st ? `wallpaper ${BGFX.mode}  ${st.w}x${st.h}  q${st.quality}  ${st.drawFps} draws/s  ${st.drawMs} ms${st.wide ? "  P3" : ""}` : `wallpaper ${BGFX.mode}  (waiting)`);
+        frames = 0; worst = 0; shown = t;
+      }
+      this.perfRaf = requestAnimationFrame(loop);
+    };
+    this.perfRaf = requestAnimationFrame(loop);
+    return true;
+  },
+
   hash(str) { let h = 9; for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 387420489); return (h ^ (h >>> 9)) >>> 0; },
   esc: s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])),
   md: s => s.replace(/\*\*(.+?)\*\*/g, '<strong class="hl">$1</strong>'),

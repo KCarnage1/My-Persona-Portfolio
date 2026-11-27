@@ -251,7 +251,8 @@ function createBgfx(c, env) {
     // the wallpaper is drawn on every nth frame where n is a whole number (1 at 60 Hz, 2 at 120 to 165 Hz, 3 at 240 Hz), so the
     // spacing between draws is even instead of alternating long and short.
     const raw = t - lastRaf; lastRaf = t;
-    if (raw > 0 && raw < 100) { frameMs = frameMs ? frameMs + (raw - frameMs) * .1 : raw; }
+    if (raw > 0 && raw < 100) { frameMs = frameMs ? frameMs + (raw - frameMs) * .1 : raw; baseMs = baseMs ? Math.min(baseMs * 1.0004, frameMs) : frameMs; }
+    adapt(t);
     if (skipN === 0 || (++tick % 30 === 0)) skipN = Math.max(1, Math.ceil(11 / Math.max(frameMs, 1)));
     if (prevT && ++phase < skipN) return;
     phase = 0;
@@ -259,18 +260,36 @@ function createBgfx(c, env) {
     f = Math.min(prevT ? dt : 16.7, 50) / 16.67; prevT = t;
     const e = 1 - Math.exp(-f * .05);
     sx += (mx - sx) * e; sy += (my - sy) * e; lastT = t;
+    const t0 = performance.now();
     pick()(t);
+    drawMs += (performance.now() - t0 - drawMs) * .1; draws++;
   }
+
+  // Adaptive quality. The page can't see how long the GPU takes, but it can see when frames start arriving late: if the
+  // wallpaper's frame interval stays well above the screen's normal interval for a couple of seconds, the canvas is rendered with
+  // fewer pixels (and eventually less often) until it keeps up. It never goes back up on its own, so it can't flip-flop.
+  const CAPS = env.maxPx ? [env.maxPx, 1.8e6, 1.0e6, 0.6e6] : [1.3e6, 1.0e6, 0.7e6, 0.5e6];
+  let quality = env.maxPx ? 1 : 0, baseMs = 0, slow = 0, checkAt = 0, lastCss = null, drawMs = 0, draws = 0, drawsAt = 0, drawFps = 0;
+  function adapt(t) {
+    if (t - drawsAt >= 1000) { drawFps = Math.round(draws * 1000 / (t - drawsAt)); draws = 0; drawsAt = t; }
+    if (t < checkAt) return;
+    checkAt = t + 1000;
+    if (frameMs > baseMs * 1.4 && frameMs > 9) slow++; else slow = 0;
+    if (slow >= 2 && quality < CAPS.length - 1) { quality++; slow = 0; baseMs = frameMs; if (lastCss) api.resize(lastCss[0], lastCss[1], lastCss[2]); }
+  }
+
   function start() { if (!running && !paused && !reduced && holds === 0) { running = true; prevT = 0; lastRaf = 0; phase = 0; requestAnimationFrame(frame); } }
 
   const api = {
     // css size and device pixel ratio of the area to cover
     resize(cssW, cssH, dpr) {
-      const cap = env.maxPx || 1.3e6; let k = Math.min(dpr || 1, cap > 2e6 ? 2 : 1.5); const px = cssW * cssH * k * k; if (px > cap) k *= Math.sqrt(cap / px);   // keep the pixel count sane
+      lastCss = [cssW, cssH, dpr];
+      const cap = CAPS[quality]; let k = Math.min(dpr || 1, cap > 2e6 ? 2 : 1.5); const px = cssW * cssH * k * k; if (px > cap) k *= Math.sqrt(cap / px);   // keep the pixel count sane
       W = c.width = Math.max(2, Math.round(cssW * k)); H = c.height = Math.max(2, Math.round(cssH * k)); m = Math.min(W, H);
       if (paused || reduced) requestAnimationFrame(still);
     },
     mouse(nx, ny) { mx = nx; my = ny; },
+    stats() { return { w: W, h: H, quality, drawMs: +drawMs.toFixed(1), drawFps, intervalMs: +frameMs.toFixed(1), wide }; },
     set(sc, th) { scene = sc || "home"; themeId = th || "p5"; redrawStill(); },
     setPaused(p) { paused = p; p ? requestAnimationFrame(still) : start(); },
     // hold(true) freezes the wallpaper while something big animates or covers it (screen wipes, windows); calls nest

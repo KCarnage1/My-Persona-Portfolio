@@ -466,6 +466,7 @@ body.booting .pane{transform:translateX(0) skewX(-14deg)}
   :root[data-theme=p5r]{--blue:color(display-p3 1 .78 .1);--hard:color(display-p3 1 .78 .1)}
   :root[data-theme=p3r]{--red:color(display-p3 .12 .38 .98);--red-hi:color(display-p3 .6 .79 1);--blue:color(display-p3 .36 .9 1);--hard:color(display-p3 .12 .38 .98)}
 }
+#perf{position:fixed;left:.6rem;bottom:2.6rem;z-index:950;margin:0;padding:.4rem .6rem;background:rgba(0,0,0,.82);color:#7dffb0;font:600 11px/1.5 ui-monospace,Menlo,Consolas,monospace;pointer-events:none;white-space:pre}
 /* ---------- sprite cursor ---------- */
 #cursor{will-change:transform;position:fixed;left:0;top:0;width:48px;height:48px;display:none;pointer-events:none;z-index:9999;background:url(../assets/cursors/normal.png) 0 0/auto 48px no-repeat}
 #cursor.link{background-image:url(../assets/cursors/link.png)}

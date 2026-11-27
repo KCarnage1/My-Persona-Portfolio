@@ -21,6 +21,7 @@ const Controller = {
     s === "home" ? View.showScreen("home") : this.enter(s);                // deep links like /#about
     this.select(0, true);
     let seen = false; try { seen = sessionStorage.getItem("pf:booted") === "1"; sessionStorage.setItem("pf:booted", "1"); } catch {}
+    if (/[?&]perf\b/.test(location.search)) View.togglePerf(true);
     View.boot(!seen, () => { this.transitioning = false; this.prebuild(); });
     // second half of startup, one piece per task so no single one holds the page
     const later = [
@@ -383,6 +384,7 @@ const Controller = {
       if (k === "]") { Music.audio && Music.go(1); return; }
       if (k === "[") { Music.audio && Music.go(-1); return; }
       if (k === "Escape" && Music.open) { Music.toggleOpen(false); return; }
+      if (k === "f" || k === "F") { View.togglePerf(); return; }
       if (k === "t" || k === "T") { this.cycleTheme(); return; }
       if (k === "b" || k === "B") { this.toggleMotion(); return; }
       if (k >= "1" && k <= "4") { this.go(Model.sections[+k - 1]); return; }

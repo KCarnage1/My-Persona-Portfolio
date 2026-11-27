@@ -7,7 +7,7 @@
   const mk = () => { const c = document.createElement("canvas"); c.id = "bgfx"; c.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block"; return c; };
   let canvas = mk(); bg.insertBefore(canvas, bg.firstChild); document.body.classList.add("fx");
   const info = () => ({ w: innerWidth, h: innerHeight, dpr: devicePixelRatio || 1, scene: document.body.dataset.screen || "home", theme: document.documentElement.dataset.theme || "p5" });
-  let send = () => {}, local = null, mode = "starting";   // one of these is the active backend
+  let send = () => {}, local = null, mode = "starting", last = null;   // one of these is the active backend
 
   function onMain() {
     mode = "main"; local = createBgfx(canvas, { reduced, p3, maxPx: 1.3e6, raf: f => requestAnimationFrame(f), makeLayer: (w, h) => { const l = document.createElement("canvas"); l.width = w; l.height = h; return l; } });
@@ -21,14 +21,14 @@
   function onWorker() {
     let w, done = false;
     const fail = () => { if (done) return; done = true; try { w && w.terminate(); } catch {} onMain(); };
-    try { w = new Worker("js/bgfx-worker.js?v=20261126a"); } catch { fail(); return; }
+    try { w = new Worker("js/bgfx-worker.js?v=20261127a"); } catch { fail(); return; }
     const timer = setTimeout(fail, 1500);
     w.onerror = () => { clearTimeout(timer); fail(); };
     w.onmessage = e => {
       if (done) return;
       clearTimeout(timer);
       if (e.data.type !== "ready") { fail(); return; }
-      done = true; mode = "worker";
+      done = true; mode = "worker"; w.onmessage = m => { if (m.data.type === "stats") last = m.data.data; };
       const off = canvas.transferControlToOffscreen();
       send = d => w.postMessage(d);
       w.postMessage({ type: "init", canvas: off, reduced, p3, ...info() }, [off]);
@@ -49,5 +49,5 @@
   const push = () => { const i = info(); send({ type: "set", scene: i.scene, theme: i.theme }); };
   new MutationObserver(push).observe(document.body, { attributes: true, attributeFilter: ["data-screen"] });
   new MutationObserver(push).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  window.BGFX = { get mode() { return mode; }, setPaused: on => send({ type: "paused", on }), hold: on => send({ type: "hold", on }) };
+  window.BGFX = { get mode() { return mode; }, stats() { if (local) return local.stats(); send({ type: "stats" }); return last; }, setPaused: on => send({ type: "paused", on }), hold: on => send({ type: "hold", on }) };
 })();

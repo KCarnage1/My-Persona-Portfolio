@@ -26,4 +26,5 @@ self.onmessage = e => {
   else if (d.type === "set") api.set(d.scene, d.theme);
   else if (d.type === "paused") api.setPaused(d.on);
   else if (d.type === "hold") api.hold(d.on);
+  else if (d.type === "stats") self.postMessage({ type: "stats", data: api.stats() });
 };

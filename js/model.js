@@ -49,6 +49,24 @@ const Model = {
       ],
     },
     {
+      id: "nebula", repo: "Nebula", cat: "tool", year: "2026", color: "#ff7a1a", cover: "NEBULA",
+      shots: [{ src: "assets/projects/nebula-1.jpg", alt: "Nebula's home screen: a sidebar of sections, a Play button, a quick-join box and favourite games" }],
+      title: "NEBULA", tag: "Rust · egui",
+      desc: "A fast, native Roblox launcher written in Rust. It installs and updates the client straight from Roblox's servers, then layers settings on top: FastFlags, an FPS unlocker, crosshairs and cursors, multiple accounts and crash-safe rollback.",
+      highlights: [
+        "Installs and updates the Roblox client from Roblox's own servers, with a checksum-verified repair that reinstalls it.",
+        "FastFlag manager with a searchable catalog that shows whether Roblox's allowlist honors each flag, so you don't chase settings the client ignores.",
+        "FPS unlocker with presets matched to your monitor's refresh rate; turning it off puts your original cap back.",
+        "Server browser that ranks servers by ping, server FPS and how full they are, then joins the best one.",
+        "Multi-account switcher with sessions encrypted by Windows DPAPI, and support for running several clients at once.",
+        "Crash-safe boot: if Roblox closes right after starting, it restores the last configuration that launched, and snapshots let you roll back.",
+        "Session profiles with their own flags and settings, Discord Rich Presence and a play-time history.",
+        "It never injects into the game. It writes the client's documented settings files and starts the unmodified executable. An independent project, not affiliated with Roblox.",
+      ],
+      stack: ["Rust", "egui", "reqwest", "Windows DPAPI", "GitHub Actions"],
+      links: [{ label: "Code", url: "https://github.com/KCarnage1/Nebula", primary: true }],
+    },
+    {
       id: "fnaz", repo: "FiveNightsAtZayeds", cat: "game", year: "2026", color: "#9b5cff", cover: "5 NIGHTS",
       shots: [
         { src: "assets/projects/fnaz-1.jpg", alt: "Five Nights at Zayed's main menu" },
@@ -209,7 +227,7 @@ const Model = {
       "I learn best by **building something, breaking it, and working out why it broke.** Most of what I know came from small projects where I got stuck, looked things up, and eventually got them working.",
     ] },
     { h: "What I've built", items: [
-      "Lately I've been shipping bigger things: **Jiran Connect,** a bilingual community platform built with Next.js and Supabase, and **Five Nights at Zayed's,** a desktop horror game with online multiplayer over WebRTC.",
+      "Lately I've been shipping bigger things: **Jiran Connect,** a bilingual community platform built with Next.js and Supabase, **Nebula,** a Roblox launcher written in Rust, and **Five Nights at Zayed's,** a desktop horror game with online multiplayer over WebRTC.",
       "Alongside those are four smaller systems, each with its own repo and tests: a **cloud task manager** with a Java backend, an **automated backup tool** in Python, a **server monitoring dashboard** with live charts, and a **library management system** in Java that I rewrote in C++ to compare the two. Building the backup tool taught me to test against broken storage, because that's where the bugs were.",
     ] },
     { h: "How I work", items: [
